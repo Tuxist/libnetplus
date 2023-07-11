@@ -25,36 +25,48 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#include <iostream>
+
 #include <sys/epoll.h>
 #include <stdlib.h>
 #include <stdint.h> 
+#include <sys/epoll.h>
 
-#include <socket.h>
-#include <exception.h>
-#include <eventapi.h>
-#include <connection.h>
+#include "socket.h"
+#include "exception.h"
+#include "eventapi.h"
+#include "connection.h"
 
 #define READEVENT 0
 #define SENDEVENT 1
 
 #define BLOCKSIZE 16384
 
+struct poll_event {
+    uint32_t events;
+    epoll_data_t data;
+}
+#ifdef __x86_64__
+__attribute__((__packed__))
+#endif
+;
+
 namespace netplus {
 
-    socket* serversocket) {
+    poll::poll(socket* serversocket) {
         _ServerSocket = serversocket;
     };
 
-    poll() {
+    poll::~poll() {
     };
 
     /*basic functions*/
-    const char* getpolltype() {
+    const char* poll::getpolltype() {
         return "EPOLL";
     }
 
     /*event handler function*/
-    void initEventHandler() {
+    void poll::initEventHandler() {
         NetException exception;
         _ServerSocket->setnonblocking();
         _ServerSocket->listen();
@@ -85,7 +97,7 @@ namespace netplus {
             _Events[i].data.ptr = nullptr;
     };
 
-    unsigned int waitEventHandler() {
+    unsigned int poll::waitEventHandler() {
         int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
         if (ret == -1) {
             NetException exception;
@@ -95,7 +107,7 @@ namespace netplus {
         return ret;
     };
 
-    int ConnectEventHandler(int pos) {
+    int poll::ConnectEventHandler(int pos) {
         NetException exception;
         con* ccon = (con*)_Events[pos].data.ptr;
         try {
@@ -117,16 +129,16 @@ namespace netplus {
 
                 ConnectEvent(ccon);
 
-                sys::cout << "I'am connecting" << sys::endl;
+                std::cout << "I'am connecting" << std::endl;
 
                 return EventHandlerStatus::EVIN;
             }
             else if (ccon->getSendData()) {
-                sys::cout << "I'am sendding" << sys::endl;
+                std::cout << "I'am sendding" << std::endl;
                 return EventHandlerStatus::EVOUT;
             }
             else {
-                sys::cout << "I'am reading" << sys::endl;
+                std::cout << "I'am reading" << std::endl;
                 return EventHandlerStatus::EVIN;
             }
         }
@@ -135,7 +147,7 @@ namespace netplus {
         }
     };
 
-    void ReadEventHandler(int pos) {
+    void poll::ReadEventHandler(int pos) {
         try {
             con* rcon = (con*)_Events[pos].data.ptr;
             if (!rcon) {
@@ -162,7 +174,7 @@ namespace netplus {
         }
     };
 
-    void WriteEventHandler(int pos) {
+    void poll::WriteEventHandler(int pos) {
         try {
             con* wcon = (con*)_Events[pos].data.ptr;
             if (!wcon) {
@@ -191,14 +203,14 @@ namespace netplus {
         }
     };
 
-    void CloseEventHandler(int pos) {
-        SystemException except;
+    void poll::CloseEventHandler(int pos) {
+        NetException except;
         _ELock.lock();
 
         con* delcon = (con*)_Events[pos].data.ptr;
 
         if (!delcon) {
-            except[SystemException::Error] << "CloseEvent connection empty cannot remove!";
+            except[NetException::Error] << "CloseEvent connection empty cannot remove!";
             _ELock.unlock();
             throw except;
         }
@@ -207,7 +219,7 @@ namespace netplus {
             delcon->csock->getSocket(), 0);
 
         if (ect < 0) {
-            except[SystemException::Error] << "CloseEvent can't delete Connection from epoll";
+            except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
             _ELock.unlock();
             throw except;
         }
@@ -220,7 +232,7 @@ namespace netplus {
     };
 
     /*Connection Ready to send Data*/
-    void sendReady(con* curcon, bool ready) {
+    void poll::sendReady(con* curcon, bool ready) {
         if (ready) {
             _setpollEvents(curcon, EPOLLIN | EPOLLOUT);
         }
@@ -230,21 +242,21 @@ namespace netplus {
     };
 
 
-    void _setpollEvents(con* curcon, int events) {
-        SystemException except;
+    void poll::_setpollEvents(con* curcon, int events) {
+        NetException except;
         struct poll_event setevent { 0 };
         setevent.events = events;
         setevent.data.ptr = curcon;
         if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,
             curcon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
-            except[SystemException::Error] << "_setEpollEvents: can change socket!";
+            except[NetException::Error] << "_setEpollEvents: can change socket!";
             throw except;
         }
     };
 
 
-    bool Run = true;
-    bool _Restart = false;
+    bool event::_Run = true;
+    bool event::_Restart = false;
 
     class EventWorker /*: public thread*/ {
     public:
@@ -255,38 +267,38 @@ namespace netplus {
 
 
         void* run(void* args) {
-            net::eventapi* eventptr = ((net::eventapi*)args);
-            while (net::event::_Run) {
+            eventapi* eventptr = ((eventapi*)args);
+            while (event::_Run) {
                 try {
                     unsigned int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
                             switch (eventptr->ConnectEventHandler(i)) {
-                            case net::poll::EVIN:
+                            case poll::EVIN:
                                 eventptr->ReadEventHandler(i);
                                 break;
-                            case net::poll::EVOUT:
+                            case poll::EVOUT:
                                 eventptr->WriteEventHandler(i);
                                 break;
                             default:
-                                SystemException excep;
-                                excep[SystemException::Error] << "no action try to close";
+                                NetException excep;
+                                excep[NetException::Error] << "no action try to close";
                                 throw excep;
                             }
                         }
-                        catch (SystemException& e) {
-                            sys::cout << e.what() << sys::endl;
+                        catch (NetException& e) {
+                            std::cout << e.what() << std::endl;
                             eventptr->CloseEventHandler(i);
-                            if (e.getErrorType() == SystemException::Critical) {
+                            if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
                         }
                     }
                 }
-                catch (SystemException& e) {
+                catch (NetException& e) {
                     switch (e.getErrorType()) {
-                    case SystemException::Critical:
-                        sys::cerr << e.what() << sys::endl;
+                    case NetException::Critical:
+                        std::cerr << e.what() << std::endl;
                         break;
                     }
                 }
@@ -298,37 +310,36 @@ namespace netplus {
     eventapi::~eventapi() {
     }
 
-    event(socket* serversocket) : poll(serversocket) {
+    event::event(socket* serversocket) : poll(serversocket) {
         if (!serversocket) {
-            SystemException exp;
-            exp[SystemException::Critical] << "server socket empty!";
+            NetException exp;
+            exp[NetException::Critical] << "server socket empty!";
             throw exp;
         }
     }
 
-    event() {
+    event::~event() {
     }
 
 
-    void RequestEvent(con* curcon) {
+    void event::RequestEvent(con* curcon) {
         return;
     }
 
-    void ResponseEvent(con* curcon) {
+    void event::ResponseEvent(con* curcon) {
         return;
     }
 
-    void ConnectEvent(con* curcon) {
+    void event::ConnectEvent(con* curcon) {
         return;
     }
 
-    void DisconnectEvent(con* curcon) {
+    void event::DisconnectEvent(con* curcon) {
         return;
     }
 
-    void runEventloop() {
-        CpuInfo cpuinfo;
-        unsigned long thrs = 1; //cpuinfo.getThreads();
+    void event::runEventloop() {
+        unsigned long thrs = 1;
         initEventHandler();
     MAINWORKERLOOP:
 
@@ -347,8 +358,8 @@ namespace netplus {
 
         EventWorker evtwrk((void*)this);
         evtwrk.run((void*)this);
-        if (net::event::_Restart) {
-            net::event::_Restart = false;
+        if (event::_Restart) {
+            event::_Restart = false;
             goto MAINWORKERLOOP;
         }
     }

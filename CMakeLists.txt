@@ -1,6 +1,8 @@
 project(systempp C CXX ASM )
 cmake_minimum_required(VERSION 3.0)
 
+find_package(libcryptplus REQUIRED)
+
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_C_COMPILER "clang")
     set(CMAKE_CXX_COMPILER "clang++")
@@ -21,7 +23,5 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
         -Wall "
     )
 endif()
-
-find_package(libcryptplus REQUIRED)
 
 add_subdirectory(src)
