@@ -145,6 +145,11 @@ unsigned long netplus::con::getRecvLength(){
   return _ReadDataLength;
 }
 
+void netplus::con::sending(bool state) {
+    _sending = state;
+    _eventapi->sendReady(this,state);
+}
+
 netplus::con::condata* netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
     unsigned long& qsize, unsigned long size) {
     if (!*firstdata || size > qsize) {
@@ -257,6 +262,7 @@ netplus::con::con(eventapi *event){
     _SendDataLast=nullptr;
     _SendDataLength=0;
     _eventapi=event;
+    _sending=false;
 }
 
 netplus::con::con(){
@@ -267,6 +273,7 @@ netplus::con::con(){
     _SendDataLast=nullptr;
     _SendDataLength=0;
     _eventapi=nullptr;
+    _sending=false;
 }
 
 netplus::con::~con(){

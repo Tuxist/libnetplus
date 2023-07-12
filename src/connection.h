@@ -73,6 +73,9 @@ namespace netplus {
             
             /*clientsocket*/
             socket  *csock;
+
+            /*set sending state*/
+            void    sending(bool state);
         protected:
             con();
             /*Incomming Data*/
@@ -92,6 +95,9 @@ namespace netplus {
             condata  *_SendDataLast;
             eventapi *_eventapi;
             
+            /*if pollout*/
+            bool      _sending;
+
             friend class event;
         };
 };
