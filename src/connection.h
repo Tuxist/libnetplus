@@ -35,7 +35,7 @@ namespace netplus {
             class condata {
             public:
                 const char*      getData();
-                unsigned long    getDataSize();
+                unsigned long    getDataLength();
                 condata         *nextcondata();
             protected:
                 condata(const char*data, unsigned long datasize);
@@ -62,23 +62,23 @@ namespace netplus {
             condata *resizeSendQueue(unsigned long size);
             void     cleanSendData();
             condata *getSendData();
-            size_t   getSendSize();
+            size_t   getSendLength();
             
             /*Get Data funtions Recv Queue*/
             condata *addRecvQueue(const char *data,unsigned long datasize);
             condata *resizeRecvQueue(unsigned long size);
             void     cleanRecvData();
             condata *getRecvData();
-            size_t   getRecvSize();
+            size_t   getRecvLength();
             
             /*clientsocket*/
             socket  *csock;
         protected:
             con();
             /*Incomming Data*/
-            size_t   _ReadDataSize;
+            size_t   _ReadDataLength;
             /*Outgoing Data*/
-            size_t   _SendDataSize;
+            size_t   _SendDataLength;
         private:
             condata *_resizeQueue(condata **firstdata, condata **lastdata,
                                   unsigned long &qsize,unsigned long size);

@@ -36,7 +36,7 @@ const char* netplus::con::condata::getData(){
   return _Data.c_str();
 }
 
-unsigned long netplus::con::condata::getDataSize(){
+unsigned long netplus::con::condata::getDataLength(){
   return _Data.length();
 }
 
@@ -76,7 +76,7 @@ netplus::con::condata *netplus::con::addSendQueue(const char*data,unsigned long 
         _SendDataLast->_nextConnectionData=new con::condata(data,datasize);
         _SendDataLast=_SendDataLast->_nextConnectionData;
     }
-    _SendDataSize+=datasize;
+    _SendDataLength+=datasize;
     _eventapi->sendReady(this,true);
     return _SendDataLast;
 }
@@ -85,12 +85,12 @@ void netplus::con::cleanSendData(){
    delete _SendDataFirst;
    _SendDataFirst=nullptr;
    _SendDataLast=nullptr;
-   _SendDataSize=0;
+   _SendDataLength=0;
 }
 
 netplus::con::condata *netplus::con::resizeSendQueue(unsigned long size){
     try{
-        return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataSize,size);
+        return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
     }catch(char *e){
         throw e; 
     }
@@ -100,8 +100,8 @@ netplus::con::condata* netplus::con::getSendData(){
   return _SendDataFirst;
 }
 
-size_t netplus::con::getSendSize(){
-  return _SendDataSize;
+size_t netplus::con::getSendLength(){
+  return _SendDataLength;
 }
 
 netplus::con::condata *netplus::con::addRecvQueue(const char *data,unsigned long datasize){
@@ -117,7 +117,7 @@ netplus::con::condata *netplus::con::addRecvQueue(const char *data,unsigned long
         _ReadDataLast->_nextConnectionData=new con::condata(data,datasize);
         _ReadDataLast=_ReadDataLast->_nextConnectionData;
     }
-    _ReadDataSize+=datasize;
+    _ReadDataLength+=datasize;
     return _ReadDataLast;
 }
 
@@ -125,13 +125,13 @@ void netplus::con::cleanRecvData(){
    delete _ReadDataFirst;
   _ReadDataFirst=nullptr;
   _ReadDataLast=nullptr;
-  _ReadDataSize=0;
+  _ReadDataLength=0;
 }
 
 
 netplus::con::condata *netplus::con::resizeRecvQueue(unsigned long size){
     try{
-        return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataSize,size);
+        return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
     }catch(char *e){
         throw e; 
     }
@@ -141,8 +141,8 @@ netplus::con::condata *netplus::con::getRecvData(){
   return _ReadDataFirst;
 }
 
-unsigned long netplus::con::getRecvSize(){
-  return _ReadDataSize;
+unsigned long netplus::con::getRecvLength(){
+  return _ReadDataLength;
 }
 
 netplus::con::condata* netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
@@ -157,11 +157,11 @@ netplus::con::condata* netplus::con::_resizeQueue(condata** firstdata, condata**
 #endif
     qsize -= size;
 HAVEDATA:
-    if ((*firstdata)->getDataSize() >= size) {
+    if ((*firstdata)->getDataLength() >= size) {
 #ifdef DEBUG
         delsize += (*firstdata)->getDataSize();;
 #endif
-        size -= (*firstdata)->getDataSize();
+        size -= (*firstdata)->getDataLength();
         condata* newdat = (*firstdata)->_nextConnectionData;
         (*firstdata)->_nextConnectionData = nullptr;
         if (*firstdata == *lastdata)
@@ -230,7 +230,7 @@ int netplus::con::searchValue(con::condata* startblock, con::condata** findblock
                                        const char* keyword,unsigned long keylen){
    unsigned long fpos=0,fcurpos=0;
     for(con::condata *curdat=startblock; curdat; curdat=curdat->nextcondata()){
-        for(unsigned long pos=0; pos<curdat->getDataSize(); ++pos){
+        for(unsigned long pos=0; pos<curdat->getDataLength(); ++pos){
             if(keyword[fcurpos]==curdat->_Data[pos]){
                 if(fcurpos==0){
                     fpos=pos;
@@ -252,20 +252,20 @@ int netplus::con::searchValue(con::condata* startblock, con::condata** findblock
 netplus::con::con(eventapi *event){
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
-    _ReadDataSize=0;
+    _ReadDataLength=0;
     _SendDataFirst=nullptr;
     _SendDataLast=nullptr;
-    _SendDataSize=0;
+    _SendDataLength=0;
     _eventapi=event;
 }
 
 netplus::con::con(){
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
-    _ReadDataSize=0;
+    _ReadDataLength=0;
     _SendDataFirst=nullptr;
     _SendDataLast=nullptr;
-    _SendDataSize=0;
+    _SendDataLength=0;
     _eventapi=nullptr;
 }
 
