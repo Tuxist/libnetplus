@@ -184,7 +184,7 @@ namespace netplus {
             }
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
-                wcon->getSendData()->getDataSize(), 0);
+                wcon->getSendData()->getDataLength(), 0);
 
             if (sended < 0) {
                 NetException exp;
@@ -193,7 +193,7 @@ namespace netplus {
             }
 
             if (sended == 0)
-                sended = wcon->getSendData()->getDataSize();
+                sended = wcon->getSendData()->getDataLength();
 
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
