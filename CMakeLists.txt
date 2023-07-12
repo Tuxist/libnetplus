@@ -4,9 +4,6 @@ cmake_minimum_required(VERSION 3.0)
 find_package(libcryptplus REQUIRED)
 
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
-    set(CMAKE_C_COMPILER "clang")
-    set(CMAKE_CXX_COMPILER "clang++")
-    set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld")
     set (VISIBILTY_HIDDEN "__attribute__ ((visibility (\"hidden\")))")
 
     set(CMAKE_CXX_FLAGS 
