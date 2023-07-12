@@ -150,47 +150,67 @@ void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
 }
 
-netplus::con::condata* netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
-    unsigned long& qsize, unsigned long size) {
-    if (!*firstdata || size > qsize) {
-        NetException excp;
-        excp[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
-        throw excp;
+netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
+                                                               unsigned long &qsize,unsigned long size){
+    if (size == 0)
+        return nullptr;
+
+    NetException exception;
+    if(!*firstdata || size > qsize){
+        exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
+        throw exception;
     }
+
 #ifdef DEBUG
-    unsigned long delsize = 0, presize = qsize;
+    int delsize=0,presize=qsize;
 #endif
-    qsize -= size;
+
+    qsize-=size;
+
+    int temp = 0;
+
 HAVEDATA:
-    if ((*firstdata)->getDataLength() >= size) {
+    if((*firstdata)) {
+        temp += ((int)(*firstdata)->getDataLength() - size);
+DELETEBLOCK:
+        if (temp <= 0) {
+            size -= (*firstdata)->getDataLength();
 #ifdef DEBUG
-        delsize += (*firstdata)->getDataSize();;
+            delsize += (*firstdata)->getDataLength();
 #endif
-        size -= (*firstdata)->getDataLength();
-        condata* newdat = (*firstdata)->_nextConnectionData;
-        (*firstdata)->_nextConnectionData = nullptr;
-        if (*firstdata == *lastdata)
-            (*lastdata) = nullptr;
-        delete* firstdata;
-        *firstdata = newdat;
-        if (*firstdata)
-            goto HAVEDATA;
-    }
-    if (size > 0) {
+            condata* newdat = (*firstdata)->_nextConnectionData;
+            (*firstdata)->_nextConnectionData = nullptr;
+            if (*firstdata == *lastdata)
+                (*lastdata) = nullptr;
+            delete* firstdata;
+            (*firstdata) = newdat;
+        }
+        else {
+            int curlen = ((int)(*firstdata)->getDataLength() - size);
+
+            if ( curlen <= 0) {
+                temp -= curlen;
+                goto DELETEBLOCK;
+            }
+
+            std::string buf = (*firstdata)->_Data.substr(size,curlen);
+            (*firstdata)->_Data = buf;
 #ifdef DEBUG
-        delsize += size;
+            delsize += size;
 #endif
-        std::string buffer;
-        buffer = (*firstdata)->_Data.substr(size, (*firstdata)->_Data.length() - size);
-        (*firstdata)->_Data = buffer;
-        *firstdata = (*firstdata);
+            size -= size;
+        }
     }
+
+    if ((*firstdata) && size != 0)
+        goto HAVEDATA;
+
 #ifdef DEBUG
-    sys::cout << " delsize: " << delsize
-        << " Calculated Blocksize: " << (presize - delsize)
-        << " Planned size: " << qsize
-        << sys::endl;
-    if ((presize - delsize) != qsize) {
+    std::cout << " delsize: "    << delsize << ": " << size
+                                 << " Calculated Blocksize: " << (presize-delsize)
+                                 << " Planned size: " << qsize
+                                 << std::endl;
+    if((presize-delsize)!=qsize){
         exception[SystemException::Critical] << "_resizeQueue: Calculated wrong size";
         throw exception;
     }
