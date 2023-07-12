@@ -9,14 +9,12 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_CXX_FLAGS 
         "${CMAKE_CXX_FLAGS} \
         -fPIC \
-        -Wall \
-        -fsanitize=address "
+        -Wall "
     )
 
     set(CMAKE_C_FLAGS 
         "${CMAKE_C_FLAGS} \
         -fPIC \
-        -fsanitize=address \
         -Wall "
     )
 endif()
