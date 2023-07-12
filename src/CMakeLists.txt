@@ -16,6 +16,8 @@ include_directories(
 
 add_library(netplus SHARED ${netplussrc})
 
+target_link_libraries(netplus cryptplus)
+
 set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
