@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <thread>
 #include <unistd.h>
-
+#include <signal.h>
 #include <sys/epoll.h>
 #include <stdlib.h>
 #include <stdint.h> 
@@ -342,6 +342,7 @@ namespace netplus {
 
     void event::runEventloop() {
         unsigned long thrs = sysconf(_SC_NPROCESSORS_ONLN);
+        signal(SIGPIPE, SIG_IGN);
         initEventHandler();
     MAINWORKERLOOP:
 
