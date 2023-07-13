@@ -120,7 +120,7 @@ namespace netplus {
                 ccon->csock->setnonblocking();
 
                 struct poll_event setevent { 0 };
-                setevent.events = EPOLLIN;
+                setevent.events = EPOLLIN | EPOLLET;
                 setevent.data.ptr = ccon;
 
                 if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
@@ -242,10 +242,10 @@ namespace netplus {
     /*Connection Ready to send Data*/
     void poll::sendReady(con* curcon, bool ready) {
         if (ready) {
-            _setpollEvents(curcon, EPOLLIN | EPOLLOUT);
+            _setpollEvents(curcon, EPOLLOUT | EPOLLET);
         }
         else {
-            _setpollEvents(curcon, EPOLLIN);
+            _setpollEvents(curcon, EPOLLIN | EPOLLET);
         }
     };
 
