@@ -115,6 +115,7 @@ namespace netplus {
         try {
             if (!ccon) {
                 ccon = new con(this);
+                ccon->conlock.lock();
                 ccon->csock = _ServerSocket->accept();
                 ccon->csock->setnonblocking();
 
@@ -123,16 +124,12 @@ namespace netplus {
                 setevent.data.ptr = ccon;
 
                 if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
-                    delete ccon->csock;
-                    delete ccon;
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
                     throw exception;
                 }
-
-                ConnectEvent(ccon);
-
                 std::cout << "I'am connecting" << std::endl;
-
+                ConnectEvent(ccon);
+                ccon->conlock.unlock();
                 return EventHandlerStatus::EVIN;
             }
             else if (ccon->getSendData()) {
@@ -143,20 +140,25 @@ namespace netplus {
                 std::cout << "I'am reading" << std::endl;
                 return EventHandlerStatus::EVIN;
             }
-        }
-        catch (NetException& e) {
+        } catch (NetException& e) {
+            delete ccon->csock;
+            delete ccon;
             throw e;
         }
     };
 
     void poll::ReadEventHandler(int pos) {
-        try {
-            con* rcon = (con*)_Events[pos].data.ptr;
-            if (!rcon) {
+        con* rcon = (con*)_Events[pos].data.ptr;
+        if (!rcon) {
                 NetException exp;
                 exp[NetException::Error] << "ReadEvent: No valied Connection at pos: " << pos;
                 throw exp;
-            }
+        }
+        try {
+
+            if(!rcon->conlock.try_lock())
+                return;
+
             char buf[BLOCKSIZE];
             ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
             if (rcvsize < 0) {
@@ -170,20 +172,25 @@ namespace netplus {
 
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
+            rcon->conlock.unlock();
         }
         catch (NetException& e) {
+            rcon->conlock.unlock();
             throw e;
         }
     };
 
     void poll::WriteEventHandler(int pos) {
-        try {
-            con* wcon = (con*)_Events[pos].data.ptr;
-            if (!wcon) {
+        con* wcon = (con*)_Events[pos].data.ptr;
+        if (!wcon) {
                 NetException exp;
                 exp[NetException::Error] << "WriteEvent: No valied Connection at pos: " << pos;
                 throw exp;
-            }
+        }
+        try {
+            if(!wcon->conlock.try_lock())
+                return;
+
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
@@ -199,21 +206,23 @@ namespace netplus {
 
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
+            wcon->conlock.unlock();
         }
         catch (NetException& e) {
+            wcon->conlock.unlock();
             throw e;
         }
     };
 
     void poll::CloseEventHandler(int pos) {
         NetException except;
-        _ELock.lock();
-
         con* delcon = (con*)_Events[pos].data.ptr;
+
+        delcon->conlock.lock();
 
         if (!delcon) {
             except[NetException::Error] << "CloseEvent connection empty cannot remove!";
-            _ELock.unlock();
+            delcon->conlock.unlock();
             throw except;
         }
 
@@ -222,7 +231,7 @@ namespace netplus {
 
         if (ect < 0) {
             except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-            _ELock.unlock();
+            delcon->conlock.unlock();
             throw except;
         }
 
@@ -230,7 +239,7 @@ namespace netplus {
         delete delcon->csock;
         delete delcon;
 
-        _ELock.unlock();
+        delcon->conlock.unlock();
     };
 
     /*Connection Ready to send Data*/

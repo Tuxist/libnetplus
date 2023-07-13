@@ -25,8 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include <mutex>
-
 #include "socket.h"
 #include "connection.h"
 
@@ -80,7 +78,6 @@ namespace netplus {
             int                  _pollFD;
             struct  poll_event  *_Events;
             socket              *_ServerSocket;
-            std::mutex           _ELock;
         };
         
         class event : public poll {
