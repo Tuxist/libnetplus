@@ -49,10 +49,10 @@ namespace netplus {
 
             /*EventHandler*/
             virtual unsigned int waitEventHandler()=0;
-            virtual void ConnectEventHandler(con* ccon)=0;
+            virtual void ConnectEventHandler(con** ccon)=0;
             virtual void ReadEventHandler(con*  rcon)=0;
             virtual void WriteEventHandler(con* wcon)=0;
-            virtual void CloseEventHandler(con* dcon)=0;
+            virtual void CloseEventHandler(con** dcon)=0;
             
             /*HTTP API Events*/
             virtual void RequestEvent(con *curcon)=0;
@@ -85,10 +85,10 @@ namespace netplus {
             int  pollState(int thid,con *ccon);
 
             unsigned int waitEventHandler();
-            void ConnectEventHandler(con* ccon);
+            void ConnectEventHandler(con** ccon);
             void ReadEventHandler(con* rcon);
             void WriteEventHandler(con *wcon);
-            void CloseEventHandler(con *dcon);
+            void CloseEventHandler(con **dcon);
             void sendReady(con *curcon,bool ready);
         private:
             void                 _lockCon(int pos);

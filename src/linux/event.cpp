@@ -120,27 +120,28 @@ namespace netplus {
         return ret;
     };
 
-    void poll::ConnectEventHandler(con* ccon) {
+    void poll::ConnectEventHandler(con** ccon) {
         NetException exception;
         try {
             if (!ccon) {
-                ccon = new con(this);
-                ccon->csock = _ServerSocket->accept();
-                ccon->csock->setnonblocking();
+                *ccon = new con(this);
+                (*ccon)->csock = _ServerSocket->accept();
+                (*ccon)->csock->setnonblocking();
 
                 struct poll_event setevent { 0 };
                 setevent.events = EPOLLIN;
-                setevent.data.ptr = ccon;
+                setevent.data.ptr = *ccon;
 
-                if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
+                if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, (*ccon)->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
                     throw exception;
                 }
-                ConnectEvent(ccon);
+                ConnectEvent(*ccon);
             }
         } catch (NetException& e) {
-            delete ccon->csock;
-            delete ccon;
+            delete (*ccon)->csock;
+            delete *ccon;
+            ccon=nullptr;
             throw e;
         }
     };
@@ -191,20 +192,20 @@ namespace netplus {
         }
     };
 
-    void poll::CloseEventHandler(con* dcon) {
+    void poll::CloseEventHandler(con** dcon) {
         NetException except;
 
-        int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-            dcon->csock->getSocket(), 0);
+        int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,(*dcon)->csock->getSocket(), 0);
 
         if (ect < 0) {
             except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
             throw except;
         }
 
-        DisconnectEvent(dcon);
-        delete dcon->csock;
-        delete dcon;
+        DisconnectEvent(*dcon);
+        delete (*dcon)->csock;
+        delete *dcon;
+        dcon=nullptr;
     };
 
     /*Connection Ready to send Data*/
@@ -330,7 +331,7 @@ namespace netplus {
                 for(int i = 0; i < wfd; ++i){
                     con *ccon=nullptr;
                     try{
-                        ConnectEventHandler(ccon);
+                        ConnectEventHandler(&ccon);
                         bool free=false;
     SEARCHFREEWORKINGTHREAD:
                         for(size_t ii = 0; ii < thdsamount; ii++){
@@ -351,7 +352,7 @@ namespace netplus {
                         if(ccon){
                             for(size_t ii = 0; ii < thdsamount; ii++){
                                 if(thcon[ii]==ccon){
-                                    CloseEventHandler(ccon);
+                                    CloseEventHandler(&ccon);
                                     thcon[ii]=nullptr;
                                 }
                             }
