@@ -276,19 +276,16 @@ namespace netplus {
                     for (int i = 0; i < wfd; ++i) {
                         try {
                             switch (eventptr->ConnectEventHandler(i)) {
-                            case poll::EVIN:
-                                eventptr->ReadEventHandler(i);
-                                break;
-                            case poll::EVOUT:
-                                eventptr->WriteEventHandler(i);
-                                break;
-                            default:
-                                NetException excep;
-                                excep[NetException::Error] << "no action try to close";
-                                throw excep;
+                                case poll::EVIN:
+                                    eventptr->ReadEventHandler(i);
+                                    break;
+                                case poll::EVOUT:
+                                    eventptr->WriteEventHandler(i);
+                                    break;
+                                default:
+                                    eventptr->CloseEventHandler(i);
                             }
-                        }
-                        catch (NetException& e) {
+                        } catch (NetException& e) {
                             std::cout << e.what() << std::endl;
                             eventptr->CloseEventHandler(i);
                             if (e.getErrorType() == NetException::Critical) {
