@@ -260,15 +260,10 @@ namespace netplus {
     bool event::_Run = true;
     bool event::_Restart = false;
 
-    class EventWorker /*: public thread*/ {
+    class EventWorker{
     public:
 
-        EventWorker(void* args) /*: thread(args) */{
-
-        };
-
-
-        void* run(void* args) {
+        EventWorker(void* args) {
             eventapi* eventptr = ((eventapi*)args);
             while (event::_Run) {
                 try {
@@ -303,7 +298,6 @@ namespace netplus {
                     }
                 }
             }
-            return nullptr;
         }
     };
 
@@ -360,8 +354,6 @@ namespace netplus {
             thd->join();
         }
 
-        EventWorker evtwrk((void*)this);
-        evtwrk.run((void*)this);
         if (event::_Restart) {
             event::_Restart = false;
             goto MAINWORKERLOOP;
