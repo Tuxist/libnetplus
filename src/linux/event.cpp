@@ -343,11 +343,12 @@ namespace netplus {
                             goto SEARCHFREEWORKINGTHREAD;
                     }catch (NetException& e) {
                         for(size_t ii = 0; ii < thdsamount; ii++){
-                            if(thcon[ii]==ccon){
+                            if(ccon && thcon[ii]==ccon){
+                                CloseEventHandler(ccon);
                                 thcon[ii]=nullptr;
                             }
                         }
-                        CloseEventHandler(ccon);
+
                     }
                 }
             } catch (NetException& e) {
