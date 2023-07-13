@@ -362,9 +362,7 @@ namespace netplus {
             } catch (NetException& e) {
                 switch (e.getErrorType()) {
                     case NetException::Critical:{
-                        std::cerr << e.what() << std::endl;
-                        event::_Run=false;
-                        break;
+                        throw e;
                     }
                 }
             }
