@@ -218,13 +218,13 @@ namespace netplus {
         NetException except;
         con* delcon = (con*)_Events[pos].data.ptr;
 
-        delcon->conlock.lock();
-
         if (!delcon) {
             except[NetException::Error] << "CloseEvent connection empty cannot remove!";
             delcon->conlock.unlock();
             throw except;
         }
+
+        delcon->conlock.lock();
 
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
@@ -238,8 +238,6 @@ namespace netplus {
         DisconnectEvent(delcon);
         delete delcon->csock;
         delete delcon;
-
-        delcon->conlock.unlock();
     };
 
     /*Connection Ready to send Data*/
