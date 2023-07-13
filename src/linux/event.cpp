@@ -287,7 +287,7 @@ namespace netplus {
                                     eventptr->WriteEventHandler(i);
                                     break;
                                 case poll::EVWAIT:
-                                    continue;
+                                    break;
                                 default:
                                     eventptr->CloseEventHandler(i);
                                     break;
