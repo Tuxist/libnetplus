@@ -342,10 +342,18 @@ namespace netplus {
                         if(!free)
                             goto SEARCHFREEWORKINGTHREAD;
                     }catch (NetException& e) {
-                        for(size_t ii = 0; ii < thdsamount; ii++){
-                            if(ccon && thcon[ii]==ccon){
-                                CloseEventHandler(ccon);
-                                thcon[ii]=nullptr;
+                        switch (e.getErrorType()) {
+                            case NetException::Critical:{
+                                throw e;
+                            }
+                        }
+                        std::cout << e.what() << std::endl;
+                        if(ccon){
+                            for(size_t ii = 0; ii < thdsamount; ii++){
+                                if(thcon[ii]==ccon){
+                                    CloseEventHandler(ccon);
+                                    thcon[ii]=nullptr;
+                                }
                             }
                         }
 
@@ -356,6 +364,7 @@ namespace netplus {
                     case NetException::Critical:{
                         std::cerr << e.what() << std::endl;
                         event::_Run=false;
+                        break;
                     }
                 }
             }
