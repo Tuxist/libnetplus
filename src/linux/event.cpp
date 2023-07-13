@@ -127,12 +127,11 @@ namespace netplus {
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
                     throw exception;
                 }
-                std::cout << "I'am connecting" << std::endl;
                 ConnectEvent(ccon);
                 ccon->conlock.unlock();
                 return EventHandlerStatus::EVIN;
             }else{
-                _trylockCon(ccon);
+                _lockCon(ccon);
                 if (ccon->getSendData()) {
                     _unlockCon(ccon);
                     return EventHandlerStatus::EVOUT;
