@@ -59,10 +59,6 @@ namespace netplus {
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
             virtual void sendReady(con *curcon,bool ready)=0;
-
-
-            /*give state of connection*/
-            virtual int  pollstate(int pos)=0;
         };
         
         class poll : public eventapi{
