@@ -26,11 +26,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
 #include <iostream>
+#include <vector>
+#include <thread>
+#include <unistd.h>
 
 #include <sys/epoll.h>
 #include <stdlib.h>
 #include <stdint.h> 
-#include <sys/epoll.h>
 
 #include "socket.h"
 #include "exception.h"
@@ -339,22 +341,25 @@ namespace netplus {
     }
 
     void event::runEventloop() {
-        unsigned long thrs = 1;
+        unsigned long thrs = sysconf(_SC_NPROCESSORS_ONLN);
         initEventHandler();
     MAINWORKERLOOP:
 
-        //threadpool thpool;
-        //for (unsigned long i = 0; i < thrs; i++) {
-        //    try {
-        //        thread* wth = new EventWorker((void*)this);
-        //        thpool.addjob(wth);
-        //    }
-        //    catch (SystemException& e) {
-        //        throw e;
-        //    }
-        //}
+        std::vector<std::thread> thpool;
+        for (unsigned long i = 0; i < thrs; i++) {
+           try {
+               thpool.push_back(std::thread([this](){
+                   new EventWorker((void*)this);
+               }));
+           }
+           catch (NetException& e) {
+               throw e;
+           }
+        }
 
-        //thpool.join();
+        for(std::vector<std::thread>::iterator thd = thpool.begin(); thd!=thpool.end();  ++thd){
+            thd->join();
+        }
 
         EventWorker evtwrk((void*)this);
         evtwrk.run((void*)this);
