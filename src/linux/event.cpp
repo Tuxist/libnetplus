@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
 #include <iostream>
-#include <vector>
+#include <map>
 #include <thread>
 #include <unistd.h>
 #include <signal.h>
@@ -65,6 +65,17 @@ namespace netplus {
     /*basic functions*/
     const char* poll::getpolltype() {
         return "EPOLL";
+    }
+
+    int poll::pollState(int thid,con *ccon){
+        ccon=thcon[thid];
+        if(!ccon){
+            return poll::EVWAIT;
+        }
+        if(ccon->getSendLength()!=0)
+            return poll::EVOUT;
+
+        return poll::EVIN;
     }
 
     /*event handler function*/
@@ -109,13 +120,11 @@ namespace netplus {
         return ret;
     };
 
-    int poll::ConnectEventHandler(int pos) {
+    void poll::ConnectEventHandler(con* ccon) {
         NetException exception;
-        con* ccon = (con*)_Events[pos].data.ptr;
         try {
             if (!ccon) {
                 ccon = new con(this);
-                ccon->conlock.lock();
                 ccon->csock = _ServerSocket->accept();
                 ccon->csock->setnonblocking();
 
@@ -128,17 +137,6 @@ namespace netplus {
                     throw exception;
                 }
                 ConnectEvent(ccon);
-                ccon->conlock.unlock();
-                return EventHandlerStatus::EVIN;
-            }else{
-                _lockCon(ccon);
-                if (ccon->getSendData()) {
-                    _unlockCon(ccon);
-                    return EventHandlerStatus::EVOUT;
-                } else {
-                    _unlockCon(ccon);
-                    return EventHandlerStatus::EVIN;
-                }
             }
         } catch (NetException& e) {
             delete ccon->csock;
@@ -147,23 +145,14 @@ namespace netplus {
         }
     };
 
-    void poll::ReadEventHandler(int pos) {
-        con* rcon = (con*)_Events[pos].data.ptr;
-        if (!rcon) {
-                NetException exp;
-                exp[NetException::Error] << "ReadEvent: No valied Connection at pos: " << pos;
-                throw exp;
-        }
+    void poll::ReadEventHandler(con* rcon) {
         try {
-
-            if(!_trylockCon(rcon))
-                return;
 
             char buf[BLOCKSIZE];
             ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
             if (rcvsize < 0) {
                 NetException exp;
-                exp[NetException::Error] << "ReadEvent: recvData failed at pos: " << pos;
+                exp[NetException::Error] << "ReadEvent: recvData failed close connection!";
                 throw exp;
             }
 
@@ -172,24 +161,14 @@ namespace netplus {
 
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
-            _unlockCon(rcon);
         }
         catch (NetException& e) {
-            _unlockCon(rcon);
             throw e;
         }
     };
 
-    void poll::WriteEventHandler(int pos) {
-        con* wcon = (con*)_Events[pos].data.ptr;
-        if (!wcon) {
-                NetException exp;
-                exp[NetException::Error] << "WriteEvent: No valied Connection at pos: " << pos;
-                throw exp;
-        }
+    void poll::WriteEventHandler(con* wcon) {
         try {
-            if(!_trylockCon(wcon))
-                return;
 
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
@@ -197,7 +176,7 @@ namespace netplus {
 
             if (sended < 0) {
                 NetException exp;
-                exp[NetException::Error] << "WriteEvent: sendData failed at pos: " << pos;
+                exp[NetException::Error] << "WriteEvent: sendData failed failed close connection!";
                 throw exp;
             }
 
@@ -206,37 +185,26 @@ namespace netplus {
 
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
-            wcon->conlock.unlock();
         }
         catch (NetException& e) {
-            wcon->conlock.unlock();
             throw e;
         }
     };
 
-    void poll::CloseEventHandler(int pos) {
+    void poll::CloseEventHandler(con* dcon) {
         NetException except;
-        con* delcon = (con*)_Events[pos].data.ptr;
-
-        if (!delcon) {
-            except[NetException::Error] << "CloseEvent connection empty cannot remove!";
-            throw except;
-        }
-
-        _lockCon(delcon);
 
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-            delcon->csock->getSocket(), 0);
+            dcon->csock->getSocket(), 0);
 
         if (ect < 0) {
             except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-            _unlockCon(delcon);;
             throw except;
         }
 
-        DisconnectEvent(delcon);
-        delete delcon->csock;
-        delete delcon;
+        DisconnectEvent(dcon);
+        delete dcon->csock;
+        delete dcon;
     };
 
     /*Connection Ready to send Data*/
@@ -262,59 +230,37 @@ namespace netplus {
         }
     };
 
-    void poll::_lockCon(con *curcon){
-        const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.lock();
-    }
-
-    void poll::_unlockCon(con *curcon){
-        const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.unlock();
-    }
-
-    bool poll::_trylockCon(con *curcon){
-        const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.try_lock();
-    }
-
     bool event::_Run = true;
     bool event::_Restart = false;
+
+    struct workerArgs{
+        eventapi *api;
+        int       thid;
+    };
 
     class EventWorker{
     public:
 
         EventWorker(void* args) {
-            eventapi* eventptr = ((eventapi*)args);
+            eventapi* eventptr = ((workerArgs*)args)->api;
+            int id= ((workerArgs*)args)->thid;
             while (event::_Run) {
                 try {
-                    unsigned int wfd = eventptr->waitEventHandler();
-                    for (int i = 0; i < wfd; ++i) {
-                        try {
-                            switch (eventptr->ConnectEventHandler(i)) {
-                                case poll::EVIN:
-                                    eventptr->ReadEventHandler(i);
-                                    break;
-                                case poll::EVOUT:
-                                    eventptr->WriteEventHandler(i);
-                                    break;
-                                default:
-                                    eventptr->CloseEventHandler(i);
-                                    break;
-                            }
-                        } catch (NetException& e) {
-                            std::cout << e.what() << std::endl;
-                            eventptr->CloseEventHandler(i);
-                            if (e.getErrorType() == NetException::Critical) {
-                                throw e;
-                            }
-                        }
+                    con *ccon=nullptr;
+                    switch (eventptr->pollState(id,ccon)) {
+                        case poll::EVIN:
+                            eventptr->ReadEventHandler(ccon);
+                            break;
+                        case poll::EVOUT:
+                            eventptr->WriteEventHandler(ccon);
+                            break;
+                        default:
+                            usleep(1000);
                     }
-                }
-                catch (NetException& e) {
-                    switch (e.getErrorType()) {
-                    case NetException::Critical:
-                        std::cerr << e.what() << std::endl;
-                        break;
+                } catch (NetException& e) {
+                    std::cout << e.what() << std::endl;
+                    if (e.getErrorType() == NetException::Critical) {
+                        throw e;
                     }
                 }
             }
@@ -353,16 +299,19 @@ namespace netplus {
     }
 
     void event::runEventloop() {
-        unsigned long thrs = sysconf(_SC_NPROCESSORS_ONLN);
+        thdsamount = sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
         initEventHandler();
     MAINWORKERLOOP:
 
-        std::vector<std::thread> thpool;
-        for (unsigned long i = 0; i < thrs; i++) {
+        std::map<int,std::thread> thpool;
+        for (size_t i = 0; i < thdsamount; i++) {
            try {
-               thpool.push_back(std::thread([this](){
-                   new EventWorker((void*)this);
+               struct workerArgs args;
+               args.api=this;
+               args.thid=i;
+               thpool[i]=(std::thread([args](){
+                   new EventWorker((void*)&args);
                }));
            }
            catch (NetException& e) {
@@ -370,8 +319,49 @@ namespace netplus {
            }
         }
 
-        for(std::vector<std::thread>::iterator thd = thpool.begin(); thd!=thpool.end();  ++thd){
-            thd->join();
+
+
+        for (size_t i = 0; i < thdsamount; i++)
+            thcon[i]=nullptr;
+
+        while (event::_Run) {
+            try {
+                int wfd = waitEventHandler();
+                for(int i = 0; i < wfd; ++i){
+                    con *ccon=nullptr;
+                    try{
+                        ConnectEventHandler(ccon);
+                        bool free=false;
+    SEARCHFREEWORKINGTHREAD:
+                        for(size_t ii = 0; ii < thdsamount; ii++){
+                            if(!thcon[ii]){
+                                thcon[ii]=ccon;
+                                free=true;
+                            }
+                        }
+                        if(!free)
+                            goto SEARCHFREEWORKINGTHREAD;
+                    }catch (NetException& e) {
+                        for(size_t ii = 0; ii < thdsamount; ii++){
+                            if(thcon[ii]==ccon){
+                                thcon[ii]=nullptr;
+                            }
+                        }
+                        CloseEventHandler(ccon);
+                    }
+                }
+            } catch (NetException& e) {
+                switch (e.getErrorType()) {
+                    case NetException::Critical:{
+                        std::cerr << e.what() << std::endl;
+                        event::_Run=false;
+                    }
+                }
+            }
+        }
+
+        for(std::map<int,std::thread>::iterator thd = thpool.begin(); thd!=thpool.end();  ++thd){
+            thd->second.join();
         }
 
         if (event::_Restart) {

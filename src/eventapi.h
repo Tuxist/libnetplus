@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <map>
+
 #include "socket.h"
 #include "connection.h"
 
@@ -42,12 +44,15 @@ namespace netplus {
             virtual void initEventHandler()=0;        
             virtual const char *getpolltype()=0;
             
+            /*get pollState by thread id*/
+            virtual int  pollState(int thid,con *ccon)=0;
+
             /*EventHandler*/
             virtual unsigned int waitEventHandler()=0;
-            virtual int ConnectEventHandler(int pos)=0;
-            virtual void ReadEventHandler(int pos)=0;
-            virtual void WriteEventHandler(int pos)=0;
-            virtual void CloseEventHandler(int pos)=0;
+            virtual void ConnectEventHandler(con* ccon)=0;
+            virtual void ReadEventHandler(con*  rcon)=0;
+            virtual void WriteEventHandler(con* wcon)=0;
+            virtual void CloseEventHandler(con* dcon)=0;
             
             /*HTTP API Events*/
             virtual void RequestEvent(con *curcon)=0;
@@ -59,30 +64,41 @@ namespace netplus {
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
             virtual void sendReady(con *curcon,bool ready)=0;
+        public:
+            size_t  getThreadsAmount(){
+                return thdsamount;
+            }
+        protected:
+            /*store number of threads*/
+            size_t  thdsamount;
+            /*thread -> connection*/
+            std::map<int,con*> thcon;
         };
-        
+
         class poll : public eventapi{
         public:
             poll(socket* serversocket);
             virtual ~poll();
-            const char *getpolltype();
+
             void initEventHandler();
+            const char *getpolltype();
+            int  pollState(int thid,con *ccon);
+
             unsigned int waitEventHandler();
-            int ConnectEventHandler(int pos);
-            void ReadEventHandler(int pos);
-            void WriteEventHandler(int pos);
-            void CloseEventHandler(int pos);
+            void ConnectEventHandler(con* ccon);
+            void ReadEventHandler(con* rcon);
+            void WriteEventHandler(con *wcon);
+            void CloseEventHandler(con *dcon);
             void sendReady(con *curcon,bool ready);
         private:
-            void                 _lockCon(con *curcon);
-            void                 _unlockCon(con *curcon);
-            bool                 _trylockCon(con *curcon);
-
+            void                 _lockCon(int pos);
+            void                 _unlockCon(int pos);
+            bool                 _trylockCon(int pos);
             void                 _setpollEvents(con *curcon,int events);
             int                  _pollFD;
             struct  poll_event  *_Events;
             socket              *_ServerSocket;
-            std::mutex           _StateLock;
+
         };
         
         class event : public poll {
@@ -100,5 +116,6 @@ namespace netplus {
             virtual ~event();
             static bool _Run;
             static bool _Restart;
+            std::mutex  _StateLock;
         };
 };
