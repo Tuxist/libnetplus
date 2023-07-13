@@ -284,6 +284,7 @@ namespace netplus {
                                     break;
                                 default:
                                     eventptr->CloseEventHandler(i);
+                                    break;
                             }
                         } catch (NetException& e) {
                             std::cout << e.what() << std::endl;
