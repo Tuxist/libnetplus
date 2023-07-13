@@ -44,7 +44,7 @@ namespace netplus {
             
             /*EventHandler*/
             virtual unsigned int waitEventHandler()=0;
-            virtual void ConnectEventHandler(int pos)=0;
+            virtual int ConnectEventHandler(int pos)=0;
             virtual void ReadEventHandler(int pos)=0;
             virtual void WriteEventHandler(int pos)=0;
             virtual void CloseEventHandler(int pos)=0;
@@ -72,18 +72,21 @@ namespace netplus {
             const char *getpolltype();
             void initEventHandler();
             unsigned int waitEventHandler();
-            void ConnectEventHandler(int pos);
+            int ConnectEventHandler(int pos);
             void ReadEventHandler(int pos);
             void WriteEventHandler(int pos);
             void CloseEventHandler(int pos);
             void sendReady(con *curcon,bool ready);
-            int  pollstate(int pos);
         private:
+            void                 _lockCon(con *curcon);
+            void                 _unlockCon(con *curcon);
+            bool                 _trylockCon(con *curcon);
 
             void                 _setpollEvents(con *curcon,int events);
             int                  _pollFD;
             struct  poll_event  *_Events;
             socket              *_ServerSocket;
+            std::mutex           _StateLock;
         };
         
         class event : public poll {

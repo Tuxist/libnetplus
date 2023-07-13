@@ -109,7 +109,7 @@ namespace netplus {
         return ret;
     };
 
-    void poll::ConnectEventHandler(int pos) {
+    int poll::ConnectEventHandler(int pos) {
         NetException exception;
         con* ccon = (con*)_Events[pos].data.ptr;
         try {
@@ -120,7 +120,7 @@ namespace netplus {
                 ccon->csock->setnonblocking();
 
                 struct poll_event setevent { 0 };
-                setevent.events = EPOLLIN | EPOLLET;
+                setevent.events = EPOLLIN;
                 setevent.data.ptr = ccon;
 
                 if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
@@ -130,6 +130,16 @@ namespace netplus {
                 std::cout << "I'am connecting" << std::endl;
                 ConnectEvent(ccon);
                 ccon->conlock.unlock();
+                return EventHandlerStatus::EVIN;
+            }else{
+                _trylockCon(ccon);
+                if (ccon->getSendData()) {
+                    _unlockCon(ccon);
+                    return EventHandlerStatus::EVOUT;
+                } else {
+                    _unlockCon(ccon);
+                    return EventHandlerStatus::EVIN;
+                }
             }
         } catch (NetException& e) {
             delete ccon->csock;
@@ -147,7 +157,7 @@ namespace netplus {
         }
         try {
 
-            if(!rcon->conlock.try_lock())
+            if(!_trylockCon(rcon))
                 return;
 
             char buf[BLOCKSIZE];
@@ -163,10 +173,10 @@ namespace netplus {
 
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
-            rcon->conlock.unlock();
+            _unlockCon(rcon);
         }
         catch (NetException& e) {
-            rcon->conlock.unlock();
+            _unlockCon(rcon);
             throw e;
         }
     };
@@ -179,7 +189,7 @@ namespace netplus {
                 throw exp;
         }
         try {
-            if(!wcon->conlock.try_lock())
+            if(!_trylockCon(wcon))
                 return;
 
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
@@ -214,14 +224,14 @@ namespace netplus {
             throw except;
         }
 
-        delcon->conlock.lock();
+        _lockCon(delcon);
 
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
 
         if (ect < 0) {
             except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-            delcon->conlock.unlock();
+            _unlockCon(delcon);;
             throw except;
         }
 
@@ -233,10 +243,10 @@ namespace netplus {
     /*Connection Ready to send Data*/
     void poll::sendReady(con* curcon, bool ready) {
         if (ready) {
-            _setpollEvents(curcon, EPOLLOUT | EPOLLET);
+            _setpollEvents(curcon, EPOLLIN | EPOLLOUT);
         }
         else {
-            _setpollEvents(curcon, EPOLLIN | EPOLLET);
+            _setpollEvents(curcon, EPOLLIN);
         }
     };
 
@@ -253,16 +263,19 @@ namespace netplus {
         }
     };
 
-    int poll::pollstate(int pos){
-        con* scon = (con*)_Events[pos].data.ptr;
-        if(scon->conlock.try_lock()){
-            if(scon->getSendLength()!=0){
-                scon->conlock.unlock();
-                return poll::EVOUT;
-            }
-            return poll::EVIN;
-        }
-        return poll::EVWAIT;
+    void poll::_lockCon(con *curcon){
+        const std::lock_guard<std::mutex> lock(_StateLock);
+        return curcon->conlock.lock();
+    }
+
+    void poll::_unlockCon(con *curcon){
+        const std::lock_guard<std::mutex> lock(_StateLock);
+        return curcon->conlock.unlock();
+    }
+
+    bool poll::_trylockCon(con *curcon){
+        const std::lock_guard<std::mutex> lock(_StateLock);
+        return curcon->conlock.try_lock();
     }
 
     bool event::_Run = true;
@@ -278,15 +291,12 @@ namespace netplus {
                     unsigned int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
-                            eventptr->ConnectEventHandler(i);
-                            switch (eventptr->pollstate(i)) {
+                            switch (eventptr->ConnectEventHandler(i)) {
                                 case poll::EVIN:
                                     eventptr->ReadEventHandler(i);
                                     break;
                                 case poll::EVOUT:
                                     eventptr->WriteEventHandler(i);
-                                    break;
-                                case poll::EVWAIT:
                                     break;
                                 default:
                                     eventptr->CloseEventHandler(i);
