@@ -333,15 +333,12 @@ namespace netplus {
                     try{
                         ConnectEventHandler(&ccon);
                         bool free=false;
-    SEARCHFREEWORKINGTHREAD:
                         for(size_t ii = 0; ii < thdsamount; ii++){
                             if(!thcon[ii]){
                                 thcon[ii]=ccon;
                                 free=true;
                             }
                         }
-                        if(!free)
-                            goto SEARCHFREEWORKINGTHREAD;
                     }catch (NetException& e) {
                         switch (e.getErrorType()) {
                             case NetException::Critical:{
