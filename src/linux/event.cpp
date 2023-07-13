@@ -109,7 +109,7 @@ namespace netplus {
         return ret;
     };
 
-    int poll::ConnectEventHandler(int pos) {
+    void poll::ConnectEventHandler(int pos) {
         NetException exception;
         con* ccon = (con*)_Events[pos].data.ptr;
         try {
@@ -130,15 +130,6 @@ namespace netplus {
                 std::cout << "I'am connecting" << std::endl;
                 ConnectEvent(ccon);
                 ccon->conlock.unlock();
-                return EventHandlerStatus::EVIN;
-            }
-            else if (ccon->getSendData()) {
-                std::cout << "I'am sendding" << std::endl;
-                return EventHandlerStatus::EVOUT;
-            }
-            else {
-                std::cout << "I'am reading" << std::endl;
-                return EventHandlerStatus::EVIN;
             }
         } catch (NetException& e) {
             delete ccon->csock;
@@ -262,6 +253,17 @@ namespace netplus {
         }
     };
 
+    int poll::pollstate(int pos){
+        con* scon = (con*)_Events[pos].data.ptr;
+        if(scon->conlock.try_lock()){
+            if(scon->getSendLength()!=0){
+                scon->conlock.unlock();
+                return poll::EVOUT;
+            }
+            return poll::EVIN;
+        }
+        return poll::EVWAIT;
+    }
 
     bool event::_Run = true;
     bool event::_Restart = false;
@@ -276,13 +278,16 @@ namespace netplus {
                     unsigned int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
-                            switch (eventptr->ConnectEventHandler(i)) {
+                            eventptr->ConnectEventHandler(i);
+                            switch (eventptr->pollstate(i)) {
                                 case poll::EVIN:
                                     eventptr->ReadEventHandler(i);
                                     break;
                                 case poll::EVOUT:
                                     eventptr->WriteEventHandler(i);
                                     break;
+                                case poll::EVWAIT:
+                                    continue;
                                 default:
                                     eventptr->CloseEventHandler(i);
                                     break;
