@@ -220,7 +220,6 @@ namespace netplus {
 
         if (!delcon) {
             except[NetException::Error] << "CloseEvent connection empty cannot remove!";
-            delcon->conlock.unlock();
             throw except;
         }
 
