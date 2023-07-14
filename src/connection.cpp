@@ -275,6 +275,8 @@ int netplus::con::searchValue(con::condata* startblock, con::condata** findblock
 }
 
 netplus::con::con(eventapi *event){
+    csock=nullptr;
+
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
     _ReadDataLength=0;
@@ -286,6 +288,8 @@ netplus::con::con(eventapi *event){
 }
 
 netplus::con::con(){
+    csock=nullptr;
+
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
     _ReadDataLength=0;

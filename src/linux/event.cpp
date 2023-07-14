@@ -123,7 +123,6 @@ namespace netplus {
     };
 
     void poll::ConnectEventHandler(int pos) {
-        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException exception;
         con *ccon;
         try {
