@@ -132,7 +132,8 @@ namespace netplus {
                 ccon->conlock.unlock();
                 return EventHandlerStatus::EVIN;
             }else{
-                _trylockCon(ccon);
+                if(!_trylockCon(ccon))
+                    return EventHandlerStatus::EVWAIT;
                 if (ccon->getSendData()) {
                     _unlockCon(ccon);
                     return EventHandlerStatus::EVOUT;
@@ -297,6 +298,8 @@ namespace netplus {
                                     break;
                                 case poll::EVOUT:
                                     eventptr->WriteEventHandler(i);
+                                    break;
+                                case poll::EVWAIT:
                                     break;
                                 default:
                                     eventptr->CloseEventHandler(i);
