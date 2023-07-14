@@ -277,11 +277,11 @@ namespace netplus {
                     int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
+                            int state=eventptr->pollState(i);
+                            if(state==poll::EVCON)
+                                eventptr->ConnectEventHandler(i);
                             if(eventptr->trylockCon(i)){
-                                switch (eventptr->pollState(i)) {
-                                    case poll::EVCON:
-                                        eventptr->ConnectEventHandler(i);
-                                    break;
+                                switch (state) {
                                     case poll::EVIN:
                                         eventptr->ReadEventHandler(i);
                                     break;
@@ -293,8 +293,8 @@ namespace netplus {
                                     default:
                                         eventptr->CloseEventHandler(i);
                                     break;
-                            }
-                            eventptr->unlockCon(i);
+                                }
+                                eventptr->unlockCon(i);
                             }
                         } catch (NetException& e) {
                             std::cerr << e.what() << std::endl;
