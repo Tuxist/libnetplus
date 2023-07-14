@@ -206,6 +206,7 @@ namespace netplus {
     };
 
     void poll::CloseEventHandler(int pos) {
+        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException except;
         con* delcon = (con*)_Events[pos].data.ptr;
 
@@ -296,8 +297,7 @@ namespace netplus {
                             }
                         } catch (NetException& e) {
                             std::cerr << e.what() << std::endl;
-                            if(eventptr->trylockCon(i))
-                                eventptr->CloseEventHandler(i);
+                            eventptr->CloseEventHandler(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
