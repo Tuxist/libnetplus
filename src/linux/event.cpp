@@ -296,7 +296,8 @@ namespace netplus {
                             }
                         } catch (NetException& e) {
                             std::cerr << e.what() << std::endl;
-                            eventptr->CloseEventHandler(i);
+                            if(eventptr->trylockCon(i))
+                                eventptr->CloseEventHandler(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
