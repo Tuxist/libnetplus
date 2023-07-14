@@ -182,6 +182,8 @@ namespace netplus {
                 throw exp;
         }
         try {
+            if(!wcon->getSendData())
+                return;
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
