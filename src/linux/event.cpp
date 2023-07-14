@@ -197,7 +197,8 @@ namespace netplus {
                 throw exp;
             }
 
-            wcon->resizeSendQueue(sended);
+            if(sended!=0)
+                wcon->resizeSendQueue(sended);
 
             ResponseEvent(wcon);
         }
@@ -209,17 +210,8 @@ namespace netplus {
     void poll::CloseEventHandler(int pos) {
         const std::lock_guard<std::mutex> lock(_StateLock);
         NetException except;
+
         con* delcon = (con*)_Events[pos].data.ptr;
-
-        if (!delcon || !delcon->csock) {
-            except[NetException::Error] << "CloseEvent connection empty cannot remove!";
-            throw except;
-        }
-
-        if(!delcon->conlock.try_lock()){
-             except[NetException::Note] << "CloseEvent connection in use cannot remove!";
-            throw except;
-        }
 
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
