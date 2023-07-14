@@ -139,13 +139,14 @@ namespace netplus {
                 exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
                 throw exception;
             }
-            std::cout << "I'am connecting" << std::endl;
+            std::string ip;
+            ccon->csock->getAddress(ip);
+            std::cout << "Connected:" << ip  << std::endl;
             ConnectEvent(ccon);
             ccon->conlock.unlock();
         } catch (NetException& e) {
             delete ccon->csock;
             delete ccon;
-            throw e;
         }
     };
 

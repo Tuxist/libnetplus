@@ -32,6 +32,7 @@
 #pragma once
 
 namespace netplus {
+
         class socket {
         public:
             socket();
@@ -50,6 +51,8 @@ namespace netplus {
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size,int flags)=0;
             
+            virtual void getAddress(std::string &addr)=0;
+
             int                 _Socket;
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
@@ -72,6 +75,9 @@ namespace netplus {
             unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+
+            void getAddress(std::string &addr);
+
         private:
             tcp();
             int             _Maxconnections;
@@ -94,6 +100,8 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
             
+            void getAddress(std::string &addr);
+
         private:
             ssl();
             int              _Maxconnections;

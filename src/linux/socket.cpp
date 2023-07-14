@@ -204,6 +204,16 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
+void netplus::tcp::getAddress(std::string &addr){
+    char ipaddr[512];
+    struct sockaddr_in sockaddr;
+    socklen_t iplen = sizeof(sockaddr);
+    bzero(&sockaddr, sizeof(sockaddr));
+    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
+    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    addr=ipaddr;
+}
+
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : socket() {
     NetException exception;
@@ -318,6 +328,15 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
     return recvsize;    
 }
 
+void netplus::ssl::getAddress(std::string &addr){
+    char ipaddr[512];
+    struct sockaddr_in sockaddr;
+    socklen_t iplen = sizeof(sockaddr);
+    bzero(&sockaddr, sizeof(sockaddr));
+    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
+    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    addr=ipaddr;
+}
 
 //             size_t        version;
 //             size_t        serial;
