@@ -121,10 +121,12 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 }
                                         
 netplus::tcp::~tcp(){
-    ::close(_Socket);
+    if(_Socket>=0)
+        ::close(_Socket);
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
     }
+    delete (struct sockaddr*)_SocketPtr;
 }
 
 netplus::tcp::tcp() : socket(){
