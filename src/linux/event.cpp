@@ -100,6 +100,7 @@ namespace netplus {
     };
 
     int poll::pollState(int pos){
+        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException exception;
         con* ccon = (con*)_Events[pos].data.ptr;
         if (!ccon) {
