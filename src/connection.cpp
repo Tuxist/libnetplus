@@ -193,7 +193,7 @@ DELETEBLOCK:
                 goto DELETEBLOCK;
             }
 
-            std::string buf = (*firstdata)->_Data.substr(curlen,size);
+            std::string buf = (*firstdata)->_Data.substr(size,curlen);
             (*firstdata)->_Data = buf;
 #ifdef DEBUG
             delsize += size;
@@ -202,7 +202,7 @@ DELETEBLOCK:
         }
     }
 
-    if ((*firstdata) && size != 0)
+    if ((*firstdata) && size > 0)
         goto HAVEDATA;
 
 #ifdef DEBUG
