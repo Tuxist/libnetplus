@@ -160,7 +160,7 @@ namespace netplus {
         try {
             char buf[BLOCKSIZE];
             ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
-            if (rcvsize <= 0) {
+            if (rcvsize < 0) {
                 NetException exp;
                 exp[NetException::Error] << "ReadEvent: recvData failed at pos: " << pos;
                 throw exp;
@@ -186,7 +186,7 @@ namespace netplus {
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
 
-            if (sended <= 0) {
+            if (sended < 0) {
                 NetException exp;
                 exp[NetException::Error] << "WriteEvent: sendData failed at pos: " << pos;
                 throw exp;
