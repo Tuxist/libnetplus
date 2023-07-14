@@ -213,6 +213,9 @@ namespace netplus {
 
         con* delcon = (con*)_Events[pos].data.ptr;
 
+        if(!delcon)
+            return;
+
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
 
