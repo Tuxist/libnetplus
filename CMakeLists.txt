@@ -22,4 +22,8 @@ endif()
 set(LIBV "1")
 set(Upstream_VERSION 1.0.0)
 
+if(${DEBUG} MATCHES TRUE)
+    add_definitions(-DDEBUG)
+endif()
+
 add_subdirectory(src)

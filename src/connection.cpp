@@ -32,6 +32,10 @@
 #include "eventapi.h"
 #include "exception.h"
 
+#ifdef DEBUG
+#include <iostream>
+#endif
+
 const char* netplus::con::condata::getData(){
   return _Data.c_str();
 }
@@ -107,7 +111,7 @@ size_t netplus::con::getSendLength(){
 netplus::con::condata *netplus::con::addRecvQueue(const char *data,unsigned long datasize){
     if(datasize<=0){
         NetException excp;
-        excp[NetException::Error] << "addRecvQueue wrong datasize";
+        excp[NetException::Error] << "addRecvQueue wrong datasize:" << datasize;
         throw excp;
     }
     if(!_ReadDataFirst){
@@ -211,7 +215,7 @@ DELETEBLOCK:
                                  << " Planned size: " << qsize
                                  << std::endl;
     if((presize-delsize)!=qsize){
-        exception[SystemException::Critical] << "_resizeQueue: Calculated wrong size";
+        exception[NetException::Critical] << "_resizeQueue: Calculated wrong size";
         throw exception;
     }
 #endif

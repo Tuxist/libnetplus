@@ -26,7 +26,8 @@
  *******************************************************************************/
 
 #include <string>
-#include <stddef.h>
+#include <mutex>
+#include <cstddef>
 
 /*
  * Error Statas
@@ -64,6 +65,7 @@ namespace netplus {
     private:
         int curCType;
         std::string msg;
+        std::mutex  mlock;
     };
 };
 

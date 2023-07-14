@@ -36,6 +36,7 @@ netplus::NetException::NetException() {
 };
 
 netplus::NetException::NetException(const NetException &exp){
+    const std::lock_guard<std::mutex> lock(mlock);
     msg=exp.msg;
     curCType = exp.curCType;
 }
@@ -44,14 +45,17 @@ netplus::NetException::~NetException(){
 }
 
 int netplus::NetException::getErrorType(){
+    const std::lock_guard<std::mutex> lock(mlock);
     return curCType; 
 }
 
 const char* netplus::NetException::what(){
+    const std::lock_guard<std::mutex> lock(mlock);
     return msg.c_str();
 }
 
 netplus::NetException& netplus::NetException::append(const char *src){
+    const std::lock_guard<std::mutex> lock(mlock);
     msg.append(src);
     return *this;   
 }
