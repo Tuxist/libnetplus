@@ -126,7 +126,6 @@ netplus::tcp::~tcp(){
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
     }
-    delete (struct sockaddr*)_SocketPtr;
 }
 
 netplus::tcp::tcp() : socket(){
