@@ -132,15 +132,10 @@ namespace netplus {
                 ccon->conlock.unlock();
                 return EventHandlerStatus::EVIN;
             }else{
-                if(!_trylockCon(ccon))
-                    return EventHandlerStatus::EVWAIT;
                 if (ccon->getSendData()) {
-                    _unlockCon(ccon);
                     return EventHandlerStatus::EVOUT;
-                } else {
-                    _unlockCon(ccon);
-                    return EventHandlerStatus::EVIN;
                 }
+                return EventHandlerStatus::EVIN;
             }
         } catch (NetException& e) {
             delete ccon->csock;
@@ -157,10 +152,6 @@ namespace netplus {
                 throw exp;
         }
         try {
-
-            if(!_trylockCon(rcon))
-                return;
-
             char buf[BLOCKSIZE];
             ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
             if (rcvsize < 0) {
@@ -174,10 +165,8 @@ namespace netplus {
 
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
-            _unlockCon(rcon);
         }
         catch (NetException& e) {
-            _unlockCon(rcon);
             throw e;
         }
     };
@@ -190,9 +179,6 @@ namespace netplus {
                 throw exp;
         }
         try {
-            if(!_trylockCon(wcon))
-                return;
-
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
@@ -208,10 +194,8 @@ namespace netplus {
 
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
-            _unlockCon(wcon);
         }
         catch (NetException& e) {
-            _unlockCon(wcon);
             throw e;
         }
     };
@@ -225,15 +209,11 @@ namespace netplus {
             throw except;
         }
 
-        if(!_trylockCon(delcon))
-            return;
-
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
 
         if (ect < 0) {
             except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-            _unlockCon(delcon);;
             throw except;
         }
 
@@ -265,20 +245,16 @@ namespace netplus {
         }
     };
 
-    void poll::_lockCon(con *curcon){
+    void poll::_unlockCon(int pos){
         const std::lock_guard<std::mutex> lock(_StateLock);
+        con *curcon=(con*)_Events[pos].data.ptr;
         if(curcon)
-            return curcon->conlock.lock();
+            curcon->conlock.unlock();
     }
 
-    void poll::_unlockCon(con *curcon){
+    bool poll::_trylockCon(int pos){
         const std::lock_guard<std::mutex> lock(_StateLock);
-        if(curcon)
-            return curcon->conlock.unlock();
-    }
-
-    bool poll::_trylockCon(con *curcon){
-        const std::lock_guard<std::mutex> lock(_StateLock);
+        con *curcon=(con*)_Events[pos].data.ptr;
         if(curcon)
             return curcon->conlock.try_lock();
         return false;
@@ -294,9 +270,11 @@ namespace netplus {
             eventapi* eventptr = ((eventapi*)args);
             while (event::_Run) {
                 try {
-                    unsigned int wfd = eventptr->waitEventHandler();
+                    int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
+                            if(!eventptr->trylockCon(i))
+                                continue;
                             switch (eventptr->ConnectEventHandler(i)) {
                                 case poll::EVIN:
                                     eventptr->ReadEventHandler(i);
@@ -310,9 +288,11 @@ namespace netplus {
                                     eventptr->CloseEventHandler(i);
                                     break;
                             }
+                            eventptr->unlockCon(i);
                         } catch (NetException& e) {
-                            std::cout << e.what() << std::endl;
+                            std::cerr << e.what() << std::endl;
                             eventptr->CloseEventHandler(i);
+                            eventptr->unlockCon(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
@@ -321,9 +301,11 @@ namespace netplus {
                 }
                 catch (NetException& e) {
                     switch (e.getErrorType()) {
-                    case NetException::Critical:
-                        std::cerr << e.what() << std::endl;
-                        break;
+                        case NetException::Critical:
+                            throw e;
+                        default:
+                            std::cerr << e.what() << std::endl;
+                            break;
                     }
                 }
             }
