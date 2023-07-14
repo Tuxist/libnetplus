@@ -123,6 +123,7 @@ namespace netplus {
     };
 
     void poll::ConnectEventHandler(int pos) {
+        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException exception;
         con *ccon;
         try {
@@ -141,7 +142,7 @@ namespace netplus {
             }
             std::string ip;
             ccon->csock->getAddress(ip);
-            std::cout << "Connected:" << ip  << std::endl;
+            std::cout << "Connected: " << ip  << std::endl;
             ConnectEvent(ccon);
             ccon->conlock.unlock();
         } catch (NetException& e) {
