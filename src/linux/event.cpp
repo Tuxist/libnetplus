@@ -285,15 +285,12 @@ namespace netplus {
                                 switch (state) {
                                     case poll::EVIN:
                                         eventptr->ReadEventHandler(i);
-                                    break;
+                                        break;
                                     case poll::EVOUT:
                                         eventptr->WriteEventHandler(i);
-                                    break;
-                                    case poll::EVWAIT:
-                                    break;
+                                        break;
                                     default:
-                                        eventptr->CloseEventHandler(i);
-                                    break;
+                                        break;
                                 }
                                 eventptr->unlockCon(i);
                             }
