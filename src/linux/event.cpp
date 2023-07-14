@@ -225,7 +225,8 @@ namespace netplus {
             throw except;
         }
 
-        _lockCon(delcon);
+        if(!_trylockCon(delcon))
+            return;
 
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
@@ -266,17 +267,21 @@ namespace netplus {
 
     void poll::_lockCon(con *curcon){
         const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.lock();
+        if(curcon)
+            return curcon->conlock.lock();
     }
 
     void poll::_unlockCon(con *curcon){
         const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.unlock();
+        if(curcon)
+            return curcon->conlock.unlock();
     }
 
     bool poll::_trylockCon(con *curcon){
         const std::lock_guard<std::mutex> lock(_StateLock);
-        return curcon->conlock.try_lock();
+        if(curcon)
+            return curcon->conlock.try_lock();
+        return false;
     }
 
     bool event::_Run = true;
