@@ -297,11 +297,12 @@ namespace netplus {
                                 eventptr->unlockCon(i);
                             }
                         } catch (NetException& e) {
-                            std::cerr << e.what() << std::endl;
                             eventptr->CloseEventHandler(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
+                            if(e.getErrorType() != NetException::Note)
+                                std::cerr << e.what() << std::endl;
                         }
                     }
                 }
