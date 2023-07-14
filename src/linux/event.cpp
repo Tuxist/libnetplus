@@ -145,6 +145,7 @@ namespace netplus {
             ConnectEvent(ccon);
             ccon->conlock.unlock();
         } catch (NetException& e) {
+            ccon->conlock.unlock();
             delete ccon->csock;
             delete ccon;
         }
