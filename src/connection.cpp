@@ -193,7 +193,7 @@ DELETEBLOCK:
                 goto DELETEBLOCK;
             }
 
-            std::string buf = (*firstdata)->_Data.substr(size,curlen);
+            std::string buf = (*firstdata)->_Data.substr(curlen,size);
             (*firstdata)->_Data = buf;
 #ifdef DEBUG
             delsize += size;
