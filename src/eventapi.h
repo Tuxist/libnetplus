@@ -42,9 +42,12 @@ namespace netplus {
             virtual void initEventHandler()=0;
             virtual const char *getpolltype()=0;
 
+            /*pollstate*/
+            virtual int pollState(int pos)=0;
+
             /*EventHandler*/
             virtual unsigned int waitEventHandler()=0;
-            virtual int ConnectEventHandler(int pos)=0;
+            virtual void ConnectEventHandler(int pos)=0;
             virtual void ReadEventHandler(int pos)=0;
             virtual void WriteEventHandler(int pos)=0;
             virtual void CloseEventHandler(int pos)=0;
@@ -71,8 +74,9 @@ namespace netplus {
             virtual ~poll();
             const char *getpolltype();
             void initEventHandler();
+            int pollState(int pos);
             unsigned int waitEventHandler();
-            int ConnectEventHandler(int pos);
+            void ConnectEventHandler(int pos);
             void ReadEventHandler(int pos);
             void WriteEventHandler(int pos);
             void CloseEventHandler(int pos);

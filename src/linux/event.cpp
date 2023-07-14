@@ -99,6 +99,18 @@ namespace netplus {
             _Events[i].data.ptr = nullptr;
     };
 
+    int poll::pollState(int pos){
+        NetException exception;
+        con* ccon = (con*)_Events[pos].data.ptr;
+        if (!ccon) {
+            return EventHandlerStatus::EVCON;
+        }
+        if (ccon->getSendData()) {
+            return EventHandlerStatus::EVOUT;
+        }
+        return EventHandlerStatus::EVIN;
+    }
+
     unsigned int poll::waitEventHandler() {
         int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
         if (ret == -1) {
@@ -109,34 +121,26 @@ namespace netplus {
         return ret;
     };
 
-    int poll::ConnectEventHandler(int pos) {
+    void poll::ConnectEventHandler(int pos) {
         NetException exception;
-        con* ccon = (con*)_Events[pos].data.ptr;
+        con *ccon;
         try {
-            if (!ccon) {
-                ccon = new con(this);
-                ccon->conlock.lock();
-                ccon->csock = _ServerSocket->accept();
-                ccon->csock->setnonblocking();
+            ccon = new con(this);
+            ccon->conlock.lock();
+            ccon->csock = _ServerSocket->accept();
+            ccon->csock->setnonblocking();
 
-                struct poll_event setevent { 0 };
-                setevent.events = EPOLLIN;
-                setevent.data.ptr = ccon;
+            struct poll_event setevent { 0 };
+            setevent.events = EPOLLIN;
+            setevent.data.ptr = ccon;
 
-                if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
-                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
-                    throw exception;
-                }
-                std::cout << "I'am connecting" << std::endl;
-                ConnectEvent(ccon);
-                ccon->conlock.unlock();
-                return EventHandlerStatus::EVIN;
-            }else{
-                if (ccon->getSendData()) {
-                    return EventHandlerStatus::EVOUT;
-                }
-                return EventHandlerStatus::EVIN;
+            if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
+                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
+                throw exception;
             }
+            std::cout << "I'am connecting" << std::endl;
+            ConnectEvent(ccon);
+            ccon->conlock.unlock();
         } catch (NetException& e) {
             delete ccon->csock;
             delete ccon;
@@ -275,7 +279,10 @@ namespace netplus {
                         try {
                             if(!eventptr->trylockCon(i))
                                 continue;
-                            switch (eventptr->ConnectEventHandler(i)) {
+                            switch (eventptr->pollState(i)) {
+                                case poll::EVCON:
+                                    eventptr->ConnectEventHandler(i);
+                                    break;
                                 case poll::EVIN:
                                     eventptr->ReadEventHandler(i);
                                     break;
@@ -292,7 +299,6 @@ namespace netplus {
                         } catch (NetException& e) {
                             std::cerr << e.what() << std::endl;
                             eventptr->CloseEventHandler(i);
-                            eventptr->unlockCon(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
