@@ -207,7 +207,7 @@ namespace netplus {
         NetException except;
         con* delcon = (con*)_Events[pos].data.ptr;
 
-        if (!delcon) {
+        if (!delcon || !delcon->csock) {
             except[NetException::Error] << "CloseEvent connection empty cannot remove!";
             throw except;
         }
