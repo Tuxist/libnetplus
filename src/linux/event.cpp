@@ -166,9 +166,6 @@ namespace netplus {
                 throw exp;
             }
 
-            if (rcvsize == 0)
-                rcvsize = BLOCKSIZE;
-
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
         }
@@ -194,9 +191,6 @@ namespace netplus {
                 exp[NetException::Error] << "WriteEvent: sendData failed at pos: " << pos;
                 throw exp;
             }
-
-            if (sended == 0)
-                sended = wcon->getSendData()->getDataLength();
 
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
