@@ -45,7 +45,7 @@ netplus::con::condata *netplus::con::condata::nextcondata(){
 }
 
 netplus::con::condata::condata(const char*data,unsigned long datasize)  {
-    _Data.append(data,datasize);
+    _Data.insert(0,data,datasize);
     _nextConnectionData=nullptr;
 }
 

@@ -261,10 +261,11 @@ namespace netplus {
     }
 
     bool poll::trylockCon(int pos){
-        const std::lock_guard<std::mutex> lock(_StateLock);
-        con *curcon=(con*)_Events[pos].data.ptr;
-        if(curcon)
-            return curcon->conlock.try_lock();
+        if(_StateLock.try_lock()){
+            con *curcon=(con*)_Events[pos].data.ptr;
+            if(curcon)
+                return curcon->conlock.try_lock();
+        }
         return false;
     }
 
