@@ -245,14 +245,14 @@ namespace netplus {
         }
     };
 
-    void poll::_unlockCon(int pos){
+    void poll::unlockCon(int pos){
         const std::lock_guard<std::mutex> lock(_StateLock);
         con *curcon=(con*)_Events[pos].data.ptr;
         if(curcon)
             curcon->conlock.unlock();
     }
 
-    bool poll::_trylockCon(int pos){
+    bool poll::trylockCon(int pos){
         const std::lock_guard<std::mutex> lock(_StateLock);
         con *curcon=(con*)_Events[pos].data.ptr;
         if(curcon)
