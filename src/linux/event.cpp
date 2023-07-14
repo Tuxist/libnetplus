@@ -182,8 +182,9 @@ namespace netplus {
         }
         try {
             if(!wcon->getSendData()){
-                sendReady(wcon,false);
-                return;
+                NetException exp;
+                exp[NetException::Note] << "WriteEvent: no data to send!" << pos;
+                throw exp;
             }
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
