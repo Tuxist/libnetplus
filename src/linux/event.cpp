@@ -254,7 +254,6 @@ namespace netplus {
     };
 
     void poll::unlockCon(int pos){
-        const std::lock_guard<std::mutex> lock(_StateLock);
         con *curcon=(con*)_Events[pos].data.ptr;
         if(curcon)
             curcon->conlock.unlock();
