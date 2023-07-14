@@ -46,7 +46,8 @@ netplus::socket::socket(){
 }
 
 netplus::socket::~socket(){
-    close(_Socket);
+    if(_Socket>=0)
+        close(_Socket);
     delete (struct sockaddr*)_SocketPtr;
 }
 
