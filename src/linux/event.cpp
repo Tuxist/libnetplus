@@ -227,6 +227,7 @@ namespace netplus {
         DisconnectEvent(delcon);
         delete delcon->csock;
         delete delcon;
+        _Events[pos].data.ptr=nullptr;
     };
 
     /*Connection Ready to send Data*/

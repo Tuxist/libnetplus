@@ -184,8 +184,9 @@ DELETEBLOCK:
                 (*lastdata) = nullptr;
             delete* firstdata;
             (*firstdata) = newdat;
-        }
-        else {
+            if ((*firstdata) && size > 0)
+                goto HAVEDATA;
+        } else {
             int curlen = ((int)(*firstdata)->getDataLength() - size);
 
             if ( curlen <= 0) {
@@ -201,9 +202,6 @@ DELETEBLOCK:
             size -= size;
         }
     }
-
-    if ((*firstdata) && size > 0)
-        goto HAVEDATA;
 
 #ifdef DEBUG
     std::cout << " delsize: "    << delsize << ": " << size
