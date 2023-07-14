@@ -127,6 +127,7 @@ namespace netplus {
         con *ccon;
         try {
             ccon = new con(this);
+            ccon->conlock.lock();
             ccon->csock = _ServerSocket->accept();
             ccon->csock->setnonblocking();
 
@@ -143,6 +144,7 @@ namespace netplus {
             std::cout << "Connected: " << ip  << std::endl;
             ConnectEvent(ccon);
         } catch (NetException& e) {
+            ccon->conlock.unlock();
             delete ccon->csock;
             delete ccon;
         }
@@ -251,6 +253,20 @@ namespace netplus {
         }
     };
 
+    void poll::unlockCon(int pos){
+        con *curcon=(con*)_Events[pos].data.ptr;
+        if(curcon)
+            curcon->conlock.unlock();
+    }
+
+    bool poll::trylockCon(int pos){
+        const std::lock_guard<std::mutex> lock(_StateLock);
+        con *curcon=(con*)_Events[pos].data.ptr;
+        if(curcon)
+            return curcon->conlock.try_lock();
+        return false;
+    }
+
     bool event::_Run = true;
     bool event::_Restart = false;
 
@@ -267,15 +283,18 @@ namespace netplus {
                             int state=eventptr->pollState(i);
                             if(state==poll::EVCON)
                                 eventptr->ConnectEventHandler(i);
-                            switch (state) {
-                                case poll::EVIN:
-                                    eventptr->ReadEventHandler(i);
-                                break;
-                                case poll::EVOUT:
-                                    eventptr->WriteEventHandler(i);
-                                    break;
-                                default:
-                                    break;
+                            if(eventptr->trylockCon(i)){
+                                switch (state) {
+                                    case poll::EVIN:
+                                        eventptr->ReadEventHandler(i);
+                                        break;
+                                    case poll::EVOUT:
+                                        eventptr->WriteEventHandler(i);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                eventptr->unlockCon(i);
                             }
                         } catch (NetException& e) {
                             eventptr->CloseEventHandler(i);
