@@ -216,6 +216,11 @@ namespace netplus {
             throw except;
         }
 
+        if(!delcon->conlock.try_lock()){
+             except[NetException::Note] << "CloseEvent connection in use cannot remove!";
+            throw except;
+        }
+
         int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
             delcon->csock->getSocket(), 0);
 

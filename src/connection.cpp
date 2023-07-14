@@ -199,8 +199,10 @@ DELETEBLOCK:
 #ifdef DEBUG
             delsize += size;
 #endif
-            size -= size;
+            size -= curlen;
         }
+        if(size!=0)
+            goto HAVEDATA;
     }
 
 #ifdef DEBUG
