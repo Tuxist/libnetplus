@@ -112,7 +112,6 @@ namespace netplus {
     }
 
     unsigned int poll::waitEventHandler() {
-        const std::lock_guard<std::mutex> lock(_StateLock);
         int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
         if (ret == -1) {
             NetException exception;
