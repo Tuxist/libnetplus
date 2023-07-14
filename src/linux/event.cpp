@@ -182,8 +182,10 @@ namespace netplus {
                 throw exp;
         }
         try {
-            if(!wcon->getSendData())
+            if(!wcon->getSendData()){
+                sendReady(wcon,false);
                 return;
+            }
             ssize_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
@@ -195,6 +197,7 @@ namespace netplus {
             }
 
             wcon->resizeSendQueue(sended);
+
             ResponseEvent(wcon);
         }
         catch (NetException& e) {
