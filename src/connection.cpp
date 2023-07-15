@@ -171,9 +171,10 @@ netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata**
 
     qsize-=size;
 
+    int curlen =0;
 HAVEDATA:
     if((*firstdata)) {
-            int curlen = ((int)(*firstdata)->getDataLength() - size);
+            curlen += ((int)(*firstdata)->getDataLength() - size);
 
             if ( curlen <= 0 || size >= curlen) {
                 size -= (*firstdata)->getDataLength();
@@ -201,10 +202,10 @@ HAVEDATA:
         goto HAVEDATA;
 
 #ifdef DEBUG
-    std::cout << " delsize: "    << delsize << ": " << size
-                                 << " Calculated Blocksize: " << (presize-delsize)
-                                 << " Planned size: " << qsize
-                                 << std::endl;
+    // std::cout << " delsize: "    << delsize << ": " << size
+    //                              << " Calculated Blocksize: " << (presize-delsize)
+    //                              << " Planned size: " << qsize
+    //                              << std::endl;
     if((presize-delsize)!=qsize){
         exception[NetException::Critical] << "_resizeQueue: Calculated wrong size";
         throw exception;

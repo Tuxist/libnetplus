@@ -160,11 +160,8 @@ namespace netplus {
         try {
             char buf[BLOCKSIZE];
             ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
-            if (rcvsize <= 0) {
-                NetException exp;
-                exp[NetException::Error] << "ReadEvent: recvData failed at pos: " << pos;
-                throw exp;
-            }
+            if(rcvsize==0)
+                return;
             rcon->addRecvQueue(buf, rcvsize);
             RequestEvent(rcon);
         }
@@ -190,12 +187,6 @@ namespace netplus {
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
 
-            if (sended < 0) {
-                NetException exp;
-                exp[NetException::Error] << "WriteEvent: sendData failed at pos: " << pos;
-                throw exp;
-            }
-
             if(sended!=0)
                 wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
@@ -214,12 +205,14 @@ namespace netplus {
         if(!delcon)
             return;
 
-        int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-            delcon->csock->getSocket(), 0);
+        if(delcon->csock){
+            int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
+                delcon->csock->getSocket(), 0);
 
-        if (ect < 0) {
-            except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-            throw except;
+            if (ect < 0) {
+                except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
+                throw except;
+            }
         }
 
         DisconnectEvent(delcon);
