@@ -99,12 +99,9 @@ namespace netplus {
             _Events[i].data.ptr = nullptr;
     };
 
-    int poll::pollState(int pos){
+    int poll::pollState(con *pcon){
         NetException exception;
-        con* ccon = (con*)_Events[pos].data.ptr;
-        if(!ccon)
-            throw "Scheiße !";
-        if (ccon->getSendData()) {
+        if (pcon->getSendData()) {
             return EventHandlerStatus::EVOUT;
         }
         return EventHandlerStatus::EVIN;
@@ -120,12 +117,12 @@ namespace netplus {
         return ret;
     };
 
-    void poll::ConnectEventHandler(int pos) {
+    con *poll::ConnectEventHandler(int pos) {
         const std::lock_guard<std::mutex> lock(_StateLock);
         NetException exception;
         con *ccon = (con*)_Events[pos].data.ptr;
         if(ccon)
-            return;
+            return ccon;
         try {
             ccon = new con(this);
             ccon->conlock.lock();
@@ -146,18 +143,19 @@ namespace netplus {
 
             ConnectEvent(ccon);
             ccon->conlock.unlock();
+            return ccon;
         } catch (NetException& e) {
             ccon->conlock.unlock();
             delete ccon->csock;
             delete ccon;
         }
+        return nullptr;
     };
 
-    void poll::ReadEventHandler(int pos) {
-        con* rcon = (con*)_Events[pos].data.ptr;
+    void poll::ReadEventHandler(con *rcon) {
         if (!rcon) {
                 NetException exp;
-                exp[NetException::Error] << "ReadEvent: No valied Connection at pos: " << pos;
+                exp[NetException::Error] << "ReadEvent: No valied Connection! ";
                 throw exp;
         }
         try {
@@ -173,17 +171,16 @@ namespace netplus {
         }
     };
 
-    void poll::WriteEventHandler(int pos) {
-        con* wcon = (con*)_Events[pos].data.ptr;
+    void poll::WriteEventHandler(con* wcon) {
         if (!wcon) {
                 NetException exp;
-                exp[NetException::Error] << "WriteEvent: No valied Connection at pos: " << pos;
+                exp[NetException::Error] << "WriteEvent: No valied Connection!";
                 throw exp;
         }
         try {
             if(!wcon->getSendData()){
                 NetException exp;
-                exp[NetException::Note] << "WriteEvent: no data to send!" << pos;
+                exp[NetException::Note] << "WriteEvent: no data to send!";
                 throw exp;
             }
             size_t sended = _ServerSocket->sendData(wcon->csock,
@@ -199,10 +196,8 @@ namespace netplus {
         }
     };
 
-    void poll::CloseEventHandler(int pos) {
+    void poll::CloseEventHandler(con *delcon) {
         NetException except;
-
-        con* delcon = (con*)_Events[pos].data.ptr;
 
         if(!delcon){
             except[NetException::Error] << "CloseEvent connection not exists!";
@@ -225,7 +220,6 @@ namespace netplus {
 
         delete delcon->csock;
         delete delcon;
-        _Events[pos].data.ptr=nullptr;
     };
 
     /*Connection Ready to send Data*/
@@ -278,15 +272,15 @@ namespace netplus {
                     int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
-                            eventptr->ConnectEventHandler(i);
+                            con *pcon=eventptr->ConnectEventHandler(i);
                             if(eventptr->trylockCon(i)){
                                 try{
-                                    switch (eventptr->pollState(i)) {
+                                    switch (eventptr->pollState(pcon)) {
                                         case poll::EVIN:
-                                            eventptr->ReadEventHandler(i);
+                                            eventptr->ReadEventHandler(pcon);
                                             break;
                                         case poll::EVOUT:
-                                            eventptr->WriteEventHandler(i);
+                                            eventptr->WriteEventHandler(pcon);
                                             break;
                                         default:
                                             NetException excep;
@@ -295,7 +289,7 @@ namespace netplus {
                                     }
                                     eventptr->unlockCon(i);
                                 }catch(NetException& e){
-                                    eventptr->CloseEventHandler(i);
+                                    eventptr->CloseEventHandler(pcon);
                                     throw e;
                                 }
                             }
