@@ -81,7 +81,6 @@ netplus::con::condata *netplus::con::addSendQueue(const char*data,unsigned long 
         _SendDataLast=_SendDataLast->_nextConnectionData;
     }
     _SendDataLength+=datasize;
-    _eventapi->sendReady(this,true);
     return _SendDataLast;
 }
 
@@ -92,12 +91,8 @@ void netplus::con::cleanSendData(){
    _SendDataLength=0;
 }
 
-netplus::con::condata *netplus::con::resizeSendQueue(unsigned long size){
-    try{
-        return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
-    }catch(char *e){
-        throw e; 
-    }
+netplus::con::condata *netplus::con::resizeSendQueue(size_t size){
+    return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
 }
 
 netplus::con::condata* netplus::con::getSendData(){
@@ -133,12 +128,8 @@ void netplus::con::cleanRecvData(){
 }
 
 
-netplus::con::condata *netplus::con::resizeRecvQueue(unsigned long size){
-    try{
-        return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
-    }catch(char *e){
-        throw e; 
-    }
+netplus::con::condata *netplus::con::resizeRecvQueue(size_t size){
+    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
 }
 
 netplus::con::condata *netplus::con::getRecvData(){
@@ -155,7 +146,7 @@ void netplus::con::sending(bool state) {
 }
 
 netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
-                                                               unsigned long &qsize,unsigned long size){
+                                                               size_t &qsize,size_t size){
     NetException exception;
     if(!*firstdata || size > qsize || qsize==0 || size==0){
         exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
@@ -168,12 +159,10 @@ netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata**
 
     qsize-=size;
 
-    int curlen =0;
 HAVEDATA:
     if((*firstdata)) {
-            curlen += ((int)(*firstdata)->getDataLength() - size);
-
-            if ( curlen <= 0 || size >= (unsigned long)curlen) {
+            int curlen = ((int)(*firstdata)->getDataLength() - size);
+            if ( curlen <= 0) {
                 size -= (*firstdata)->getDataLength();
 #ifdef DEBUG
                 delsize += (*firstdata)->getDataLength();
@@ -184,17 +173,19 @@ HAVEDATA:
                     (*lastdata) = nullptr;
                 delete* firstdata;
                 (*firstdata) = newdat;
+
             }else{
                 std::string buf = (*firstdata)->_Data.substr(size,curlen);
                 (*firstdata)->_Data = buf;
 #ifdef DEBUG
                 delsize += size;
 #endif
+                size -= curlen;
             }
-            size -= curlen;
+
+            if(size!=0)
+                goto HAVEDATA;
     }
-    if(size!=0)
-        goto HAVEDATA;
 
 #ifdef DEBUG
     // std::cout << " delsize: "    << delsize << ": " << size

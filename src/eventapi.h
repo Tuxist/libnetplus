@@ -41,7 +41,6 @@ namespace netplus {
             virtual ~eventapi();
             virtual void initEventHandler()=0;
             virtual const char *getpolltype()=0;
-
             /*pollstate*/
             virtual int pollState(int pos)=0;
 

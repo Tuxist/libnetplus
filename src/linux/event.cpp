@@ -102,9 +102,8 @@ namespace netplus {
     int poll::pollState(int pos){
         NetException exception;
         con* ccon = (con*)_Events[pos].data.ptr;
-        if (!ccon) {
-            return EventHandlerStatus::EVCON;
-        }
+        if(!ccon)
+            throw "Scheiße !";
         if (ccon->getSendData()) {
             return EventHandlerStatus::EVOUT;
         }
@@ -122,13 +121,19 @@ namespace netplus {
     };
 
     void poll::ConnectEventHandler(int pos) {
+        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException exception;
-        con *ccon;
+        con *ccon = (con*)_Events[pos].data.ptr;
+        if(ccon)
+            return;
         try {
             ccon = new con(this);
             ccon->conlock.lock();
             ccon->csock = _ServerSocket->accept();
             ccon->csock->setnonblocking();
+            std::string ip;
+            ccon->csock->getAddress(ip);
+            std::cout << "Connected: " << ip  << std::endl;
 
             struct poll_event setevent { 0 };
             setevent.events = EPOLLIN;
@@ -138,9 +143,7 @@ namespace netplus {
                 exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
                 throw exception;
             }
-            std::string ip;
-            ccon->csock->getAddress(ip);
-            std::cout << "Connected: " << ip  << std::endl;
+
             ConnectEvent(ccon);
             ccon->conlock.unlock();
         } catch (NetException& e) {
@@ -166,7 +169,6 @@ namespace netplus {
             RequestEvent(rcon);
         }
         catch (NetException& e) {
-            rcon->conlock.unlock();
             throw e;
         }
     };
@@ -193,19 +195,17 @@ namespace netplus {
             ResponseEvent(wcon);
         }
         catch (NetException& e) {
-            wcon->conlock.unlock();
             throw e;
         }
     };
 
     void poll::CloseEventHandler(int pos) {
-        const std::lock_guard<std::mutex> lock(_StateLock);
         NetException except;
 
         con* delcon = (con*)_Events[pos].data.ptr;
 
-        if(!delcon || !delcon->conlock.try_lock()){
-            except[NetException::Error] << "CloseEvent connection not exists or locked!";
+        if(!delcon){
+            except[NetException::Error] << "CloseEvent connection not exists!";
             throw except;
         }
 
@@ -278,29 +278,35 @@ namespace netplus {
                     int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
                         try {
-                            int state=eventptr->pollState(i);
-                            if(state==poll::EVCON)
-                                eventptr->ConnectEventHandler(i);
+                            eventptr->ConnectEventHandler(i);
                             if(eventptr->trylockCon(i)){
-                                switch (state) {
-                                    case poll::EVIN:
-                                        eventptr->ReadEventHandler(i);
-                                        break;
-                                    case poll::EVOUT:
-                                        eventptr->WriteEventHandler(i);
-                                        break;
-                                    default:
-                                        break;
+                                try{
+                                    switch (eventptr->pollState(i)) {
+                                        case poll::EVIN:
+                                            eventptr->ReadEventHandler(i);
+                                            break;
+                                        case poll::EVOUT:
+                                            eventptr->WriteEventHandler(i);
+                                            break;
+                                        default:
+                                            NetException excep;
+                                            excep[NetException::Note] << "Eventworker: nothing todo close connection";
+                                            throw excep;
+                                    }
+                                    eventptr->unlockCon(i);
+                                }catch(NetException& e){
+                                    eventptr->CloseEventHandler(i);
+                                    throw e;
                                 }
-                                eventptr->unlockCon(i);
                             }
                         } catch (NetException& e) {
-                            eventptr->CloseEventHandler(i);
                             if (e.getErrorType() == NetException::Critical) {
                                 throw e;
                             }
-                            if(e.getErrorType() != NetException::Note)
+                            if(e.getErrorType() != NetException::Note){
                                 std::cerr << e.what() << std::endl;
+                            }
+
                         }
                     }
                 }

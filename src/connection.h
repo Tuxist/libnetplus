@@ -61,14 +61,14 @@ namespace netplus {
                                         const char* keyword,unsigned long keylen);
             
             condata *addSendQueue(const char *data,unsigned long datasize);
-            condata *resizeSendQueue(unsigned long size);
+            condata *resizeSendQueue(size_t size);
             void     cleanSendData();
             condata *getSendData();
             size_t   getSendLength();
             
             /*Get Data funtions Recv Queue*/
             condata *addRecvQueue(const char *data,unsigned long datasize);
-            condata *resizeRecvQueue(unsigned long size);
+            condata *resizeRecvQueue(size_t size);
             void     cleanRecvData();
             condata *getRecvData();
             size_t   getRecvLength();
@@ -89,7 +89,7 @@ namespace netplus {
             size_t   _SendDataLength;
         private:
             condata *_resizeQueue(condata **firstdata, condata **lastdata,
-                                  unsigned long &qsize,unsigned long size);
+                                  size_t &qsize,size_t size);
             
             /*Incomming Data*/
             condata *_ReadDataFirst;
