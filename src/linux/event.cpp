@@ -166,6 +166,7 @@ namespace netplus {
             RequestEvent(rcon);
         }
         catch (NetException& e) {
+            rcon->conlock.unlock();
             throw e;
         }
     };
@@ -192,6 +193,7 @@ namespace netplus {
             ResponseEvent(wcon);
         }
         catch (NetException& e) {
+            wcon->conlock.unlock();
             throw e;
         }
     };
@@ -202,8 +204,10 @@ namespace netplus {
 
         con* delcon = (con*)_Events[pos].data.ptr;
 
-        if(!delcon)
-            return;
+        if(!delcon || !delcon->conlock.try_lock()){
+            except[NetException::Error] << "CloseEvent connection not exists or locked!";
+            throw except;
+        }
 
         if(delcon->csock){
             int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
