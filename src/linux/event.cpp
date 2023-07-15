@@ -159,7 +159,7 @@ namespace netplus {
         }
         try {
             char buf[BLOCKSIZE];
-            ssize_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+            size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
             if(rcvsize==0)
                 return;
             rcon->addRecvQueue(buf, rcvsize);
@@ -183,7 +183,7 @@ namespace netplus {
                 exp[NetException::Note] << "WriteEvent: no data to send!" << pos;
                 throw exp;
             }
-            ssize_t sended = _ServerSocket->sendData(wcon->csock,
+            size_t sended = _ServerSocket->sendData(wcon->csock,
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
 

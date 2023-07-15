@@ -156,11 +156,8 @@ void netplus::con::sending(bool state) {
 
 netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
                                                                unsigned long &qsize,unsigned long size){
-    if (size == 0)
-        return nullptr;
-
     NetException exception;
-    if(!*firstdata || size > qsize){
+    if(!*firstdata || size > qsize || qsize==0 || size==0){
         exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
         throw exception;
     }
@@ -176,7 +173,7 @@ HAVEDATA:
     if((*firstdata)) {
             curlen += ((int)(*firstdata)->getDataLength() - size);
 
-            if ( curlen <= 0 || size >= curlen) {
+            if ( curlen <= 0 || size >= (unsigned long)curlen) {
                 size -= (*firstdata)->getDataLength();
 #ifdef DEBUG
                 delsize += (*firstdata)->getDataLength();
@@ -187,8 +184,6 @@ HAVEDATA:
                     (*lastdata) = nullptr;
                 delete* firstdata;
                 (*firstdata) = newdat;
-                if ((*firstdata) && size > 0)
-                    goto HAVEDATA;
             }else{
                 std::string buf = (*firstdata)->_Data.substr(size,curlen);
                 (*firstdata)->_Data = buf;
@@ -206,7 +201,7 @@ HAVEDATA:
     //                              << " Calculated Blocksize: " << (presize-delsize)
     //                              << " Planned size: " << qsize
     //                              << std::endl;
-    if((presize-delsize)!=qsize){
+    if((unsigned long)(presize-delsize)!=qsize){
         exception[NetException::Critical] << "_resizeQueue: Calculated wrong size";
         throw exception;
     }
