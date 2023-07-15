@@ -193,7 +193,7 @@ DELETEBLOCK:
         } else {
             int curlen = ((int)(*firstdata)->getDataLength() - size);
 
-            if ( curlen <= 0) {
+            if ( curlen <= 0 || size >= curlen) {
                 temp -= curlen;
                 goto DELETEBLOCK;
             }
