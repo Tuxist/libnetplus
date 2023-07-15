@@ -212,13 +212,10 @@ namespace netplus {
                 except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
                 throw except;
             }
+            delete delcon->csock;
         }
 
         DisconnectEvent(delcon);
-
-        delcon->conlock.unlock();
-
-        delete delcon->csock;
         delete delcon;
     };
 
@@ -245,17 +242,15 @@ namespace netplus {
         }
     };
 
-    void poll::unlockCon(int pos){
-        con *curcon=(con*)_Events[pos].data.ptr;
-        if(curcon)
-            curcon->conlock.unlock();
+    void poll::unlockCon(con  *ucon){
+        if(ucon)
+            ucon->conlock.unlock();
     }
 
-    bool poll::trylockCon(int pos){
+    bool poll::trylockCon(con *tcon){
         const std::lock_guard<std::mutex> lock(_StateLock);
-        con *curcon=(con*)_Events[pos].data.ptr;
-        if(curcon)
-            return curcon->conlock.try_lock();
+        if(tcon)
+            return tcon->conlock.try_lock();
         return false;
     }
 
@@ -273,7 +268,7 @@ namespace netplus {
                     for (int i = 0; i < wfd; ++i) {
                         try {
                             con *pcon=eventptr->ConnectEventHandler(i);
-                            if(eventptr->trylockCon(i)){
+                            if(eventptr->trylockCon(pcon)){
                                 try{
                                     switch (eventptr->pollState(pcon)) {
                                         case poll::EVIN:
@@ -287,7 +282,7 @@ namespace netplus {
                                             excep[NetException::Note] << "Eventworker: nothing todo close connection";
                                             throw excep;
                                     }
-                                    eventptr->unlockCon(i);
+                                    eventptr->unlockCon(pcon);
                                 }catch(NetException& e){
                                     eventptr->CloseEventHandler(pcon);
                                     throw e;

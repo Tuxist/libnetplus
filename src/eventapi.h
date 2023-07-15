@@ -58,8 +58,8 @@ namespace netplus {
             virtual void DisconnectEvent(con *curcon)=0;
 
             /*locking for competing threads*/
-            virtual void unlockCon(int pos)=0;
-            virtual bool trylockCon(int pos)=0;
+            virtual void unlockCon(con *ucon)=0;
+            virtual bool trylockCon(con *tcon)=0;
 
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
@@ -80,8 +80,8 @@ namespace netplus {
             void WriteEventHandler(con *wcon);
             void CloseEventHandler(con *delcon);
             void sendReady(con *curcon,bool ready);
-            void unlockCon(int pos);
-            bool trylockCon(int pos);
+            void unlockCon(con *ucon);
+            bool trylockCon(con *tcon);
         private:
 
             void                 _setpollEvents(con *curcon,int events);
