@@ -171,43 +171,34 @@ netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata**
 
     qsize-=size;
 
-    int temp = 0;
-
 HAVEDATA:
     if((*firstdata)) {
-        temp += ((int)(*firstdata)->getDataLength() - size);
-DELETEBLOCK:
-        if (temp <= 0) {
-            size -= (*firstdata)->getDataLength();
-#ifdef DEBUG
-            delsize += (*firstdata)->getDataLength();
-#endif
-            condata* newdat = (*firstdata)->_nextConnectionData;
-            (*firstdata)->_nextConnectionData = nullptr;
-            if (*firstdata == *lastdata)
-                (*lastdata) = nullptr;
-            delete* firstdata;
-            (*firstdata) = newdat;
-            if ((*firstdata) && size > 0)
-                goto HAVEDATA;
-        } else {
             int curlen = ((int)(*firstdata)->getDataLength() - size);
 
             if ( curlen <= 0 || size >= curlen) {
-                temp -= curlen;
-                goto DELETEBLOCK;
-            }
-
-            std::string buf = (*firstdata)->_Data.substr(size,curlen);
-            (*firstdata)->_Data = buf;
+                size -= (*firstdata)->getDataLength();
 #ifdef DEBUG
-            delsize += size;
+                delsize += (*firstdata)->getDataLength();
 #endif
+                condata* newdat = (*firstdata)->_nextConnectionData;
+                (*firstdata)->_nextConnectionData = nullptr;
+                if (*firstdata == *lastdata)
+                    (*lastdata) = nullptr;
+                delete* firstdata;
+                (*firstdata) = newdat;
+                if ((*firstdata) && size > 0)
+                    goto HAVEDATA;
+            }else{
+                std::string buf = (*firstdata)->_Data.substr(size,curlen);
+                (*firstdata)->_Data = buf;
+#ifdef DEBUG
+                delsize += size;
+#endif
+            }
             size -= curlen;
-        }
-        if(size!=0)
-            goto HAVEDATA;
     }
+    if(size!=0)
+        goto HAVEDATA;
 
 #ifdef DEBUG
     std::cout << " delsize: "    << delsize << ": " << size
