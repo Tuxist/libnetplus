@@ -65,7 +65,6 @@ namespace netplus {
     private:
         int curCType;
         std::string msg;
-        std::mutex  mlock;
     };
 };
 
