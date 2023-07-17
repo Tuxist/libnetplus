@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <mutex>
+
 #include "socket.h"
 #include "connection.h"
 
@@ -83,12 +85,10 @@ namespace netplus {
             void unlockCon(int pos);
             bool trylockCon(int pos);
         private:
-
             void                 _setpollEvents(con *curcon,int events);
             int                  _pollFD;
             struct  poll_event  *_Events;
             socket              *_ServerSocket;
-            std::atomic<bool>    _WaitLock;
         };
 
         class event : public poll {
