@@ -100,7 +100,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    _Socket = ::socket(AF_INET,SOCK_STREAM,0);
+    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     
     struct sockaddr_in address;
     memset(&address, 0, sizeof(address));
@@ -150,6 +150,7 @@ netplus::socket *netplus::tcp::accept(){
     csock->_Socket = ::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,&csock->_SocketPtrSize);
     if(csock->_Socket<0){
         delete csock;
+        csock=nullptr;
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
@@ -223,7 +224,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    _Socket = ::socket(AF_INET,SOCK_STREAM,0);
+    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     
     struct sockaddr_in address;
     memset(&address, 0, sizeof(address));
@@ -295,7 +296,7 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
                         data,
                         size,
                         flags,
-                        (const struct sockaddr *)socket->_SocketPtr,
+                        (const struct sockaddr *)&socket->_SocketPtr,
                         socket->_SocketPtrSize
                      );
     if(rval<0){

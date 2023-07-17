@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include <mutex>
+#include <atomic>
 
 #pragma once
 
@@ -80,7 +80,7 @@ namespace netplus {
             void    sending(bool state);
 
             /*connection locking*/
-            std::mutex conlock;
+            std::atomic<bool> conlock;
         protected:
             con();
             /*Incomming Data*/
