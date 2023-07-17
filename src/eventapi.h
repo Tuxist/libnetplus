@@ -38,8 +38,6 @@ namespace netplus {
 
             enum EventHandlerStatus{EVIN=0,EVOUT=1,EVUP=2,EVERR=3,EVWAIT=4,EVCON=5};
 
-            enum LockState{NOCONNECTION=-2,ALREADLOCKED=-1,LOCKED=0};
-
             virtual ~eventapi();
             virtual void initEventHandler()=0;
             virtual const char *getpolltype()=0;
@@ -61,7 +59,7 @@ namespace netplus {
 
             /*locking for competing threads*/
             virtual void unlockCon(int pos)=0;
-            virtual int  trylockCon(int pos)=0;
+            virtual bool trylockCon(int pos)=0;
 
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
@@ -83,7 +81,7 @@ namespace netplus {
             void CloseEventHandler(int pos);
             void sendReady(con *curcon,bool ready);
             void unlockCon(int pos);
-            int  trylockCon(int pos);
+            bool trylockCon(int pos);
         private:
 
             void                 _setpollEvents(con *curcon,int events);

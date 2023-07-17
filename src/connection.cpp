@@ -162,7 +162,7 @@ netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata**
 HAVEDATA:
     if((*firstdata)) {
             int curlen = ((int)(*firstdata)->getDataLength() - size);
-            if ( curlen <= 0) {
+            if ( curlen <= 0 || curlen >= (*firstdata)->getDataLength()) {
                 size -= (*firstdata)->getDataLength();
 #ifdef DEBUG
                 delsize += (*firstdata)->getDataLength();

@@ -103,6 +103,14 @@ namespace netplus {
     int poll::pollState(int pos){
         con *pcon = (con*)_Events[pos].data.ptr;
         NetException exception;
+
+        if(!pcon)
+            return EventHandlerStatus::EVCON;
+
+        if(pcon->conlock){
+            return EventHandlerStatus::EVWAIT;
+        }
+
         if (pcon->getSendData()) {
             return EventHandlerStatus::EVOUT;
         }
@@ -124,15 +132,9 @@ namespace netplus {
 
     void poll::ConnectEventHandler(int pos) {
         NetException exception;
-        con *ccon = (con*)_Events[pos].data.ptr;
-
+        con *ccon;
         try {
             ccon = new con(this);
-            bool expected = false;
-            if(!ccon->conlock.compare_exchange_strong(expected,true)){
-                exception[NetException::Note] << "ConnectEventHandler: connection already exists!";
-                throw exception;
-            }
             ccon->csock = _ServerSocket->accept();
             ccon->csock->setnonblocking();
             std::string ip;
@@ -143,21 +145,40 @@ namespace netplus {
             setevent.events = EPOLLIN;
             setevent.data.ptr = ccon;
 
-            if (epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
-                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
-                throw exception;
+            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent);
+
+            if ( estate < 0 ) {
+                if(estate !=EEXIST){
+                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
+                    throw exception;
+                }else{
+                    exception[NetException::Note] << "ConnectEventHandler: connection already exists!";
+                    throw exception;
+                }
             }
 
-            ConnectEvent(ccon);
+            try{
+                ConnectEvent(ccon);
+            }catch(NetException& e){
+                switch(e.getErrorType()){
+                    case NetException::Note:
+                        std::cout << e.what() << std::endl;
+                        break;
+                    default:
+                        std::cerr << e.what() << std::endl;
+                        break;
+                }
+            }
+
             ccon->conlock.store(false);
         } catch (NetException& e) {
+            delete ccon->csock;
+            delete ccon;
             switch(e.getErrorType()){
                 case NetException::Note:
                     std::cout << e.what() << std::endl;
                     break;
                 default:
-                    delete ccon->csock;
-                    delete ccon;
                     throw e;
             }
         }
@@ -220,7 +241,6 @@ namespace netplus {
 
         DisconnectEvent(delcon);
         delete delcon;
-        _Events[pos].data.ptr=nullptr;
     };
 
     /*Connection Ready to send Data*/
@@ -252,15 +272,12 @@ namespace netplus {
             ccon->conlock.store(false);;
     }
 
-    int poll::trylockCon(int pos){
+    bool poll::trylockCon(int pos){
         con *ccon = (con*)_Events[pos].data.ptr;
         bool expected = false;
-        if(ccon){
-            if(ccon->conlock.compare_exchange_strong(expected,true))
-                return LockState::LOCKED;
-            return LockState::ALREADLOCKED;
-        }
-        return LockState::NOCONNECTION;
+        if(ccon)
+            return ccon->conlock.compare_exchange_strong(expected,true);
+        return false;
     }
 
     bool event::_Run = true;
@@ -275,17 +292,19 @@ namespace netplus {
                 try {
                     int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
-                        int lock=eventptr->trylockCon(i);
                         try {
-                            if(lock == poll::LockState::LOCKED){
+                            int state = eventptr->pollState(i);
+                            if(eventptr->trylockCon(i)){
                                 try{
-                                    switch (eventptr->pollState(i)) {
+                                    switch (state) {
                                         case poll::EventHandlerStatus::EVIN:
                                             eventptr->ReadEventHandler(i);
                                             break;
                                         case poll::EventHandlerStatus::EVOUT:
                                             eventptr->WriteEventHandler(i);
                                             break;
+                                        case poll::EventHandlerStatus::EVWAIT:
+                                            continue;
                                         default:
                                             NetException excep;
                                             excep[NetException::Note] << "Eventworker: nothing todo close connection";
@@ -296,8 +315,14 @@ namespace netplus {
                                     eventptr->CloseEventHandler(i);
                                     throw e;
                                 }
-                            }else if(lock == poll::LockState::NOCONNECTION){
-                                eventptr->ConnectEventHandler(i);
+                            }else{
+                                switch (state) {
+                                        case poll::EventHandlerStatus::EVCON:
+                                            eventptr->ConnectEventHandler(i);
+                                            break;
+                                        default:
+                                            break;
+                                }
                             }
                         } catch (NetException& e) {
                             if (e.getErrorType() == NetException::Critical) {
