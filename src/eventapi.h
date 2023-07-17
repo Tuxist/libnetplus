@@ -90,7 +90,7 @@ namespace netplus {
             int                  _pollFD;
             struct  poll_event  *_Events;
             socket              *_ServerSocket;
-            std::atomic<bool>    _ConLock;
+            std::atomic<bool>    _WaitLock;
         };
 
         class event : public poll {

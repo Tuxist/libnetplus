@@ -57,7 +57,7 @@ namespace netplus {
 
     poll::poll(socket* serversocket) {
         _ServerSocket = serversocket;
-        _ConLock=false;
+        _WaitLock=false;
     };
 
     poll::~poll() {
@@ -110,7 +110,15 @@ namespace netplus {
     }
 
     unsigned int poll::waitEventHandler() {
+        bool expected = false;
+
+        if(!_WaitLock.compare_exchange_strong(expected,true))
+            return 0;
+
         int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
+
+        _WaitLock.store(false);
+
         if (ret <0 ) {
             NetException exception;
             exception[NetException::Error] << "waitEventHandler: epoll wait failure";
@@ -122,10 +130,6 @@ namespace netplus {
     void poll::ConnectEventHandler(int pos) {
         NetException exception;
         con *ccon = (con*)_Events[pos].data.ptr;
-        bool expected = false;
-
-        if(!_ConLock.compare_exchange_strong(expected,true))
-            return;
 
         try {
             ccon = new con(this);
@@ -162,7 +166,6 @@ namespace netplus {
                     throw e;
             }
         }
-        _ConLock.store(false);
     };
 
     void poll::ReadEventHandler(int pos) {
@@ -186,11 +189,6 @@ namespace netplus {
 
     void poll::WriteEventHandler(int pos) {
         con *wcon = (con*)_Events[pos].data.ptr;
-        if (!wcon) {
-                NetException exp;
-                exp[NetException::Error] << "WriteEvent: No valied Connection!";
-                throw exp;
-        }
         try {
             if(!wcon->getSendData()){
                 NetException exp;
@@ -213,10 +211,6 @@ namespace netplus {
     void poll::CloseEventHandler(int pos) {
         NetException except;
         con *delcon = (con*)_Events[pos].data.ptr;
-        if(!delcon){
-            except[NetException::Error] << "CloseEvent connection not exists!";
-            throw except;
-        }
 
         if(delcon->csock){
             int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
