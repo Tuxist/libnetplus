@@ -112,12 +112,7 @@ namespace netplus {
     unsigned int poll::waitEventHandler() {
         bool expected = false;
 
-        if(!_WaitLock.compare_exchange_strong(expected,true))
-            return 0;
-
         int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
-
-        _WaitLock.store(false);
 
         if (ret <0 ) {
             NetException exception;
@@ -280,8 +275,8 @@ namespace netplus {
                 try {
                     int wfd = eventptr->waitEventHandler();
                     for (int i = 0; i < wfd; ++i) {
+                        int lock=eventptr->trylockCon(i);
                         try {
-                            int lock=eventptr->trylockCon(i);
                             if(lock == poll::LockState::LOCKED){
                                 try{
                                     switch (eventptr->pollState(i)) {
