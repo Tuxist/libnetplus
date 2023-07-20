@@ -57,6 +57,7 @@ namespace netplus {
 
     poll::poll(socket* serversocket) {
         _ServerSocket = serversocket;
+        _EventNums=0;
     };
 
     poll::~poll() {
@@ -85,7 +86,7 @@ namespace netplus {
             throw exception;
         }
 
-        setevent.events = EPOLLIN | EPOLLOUT;
+        setevent.events = EPOLLIN;
         setevent.data.ptr = nullptr;
 
         if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,
@@ -107,10 +108,6 @@ namespace netplus {
         if(!pcon)
             return EventHandlerStatus::EVCON;
 
-        if(pcon->conlock){
-            return EventHandlerStatus::EVWAIT;
-        }
-
         if (pcon->getSendData()) {
             return EventHandlerStatus::EVOUT;
         }
@@ -118,29 +115,43 @@ namespace netplus {
     }
 
     unsigned int poll::waitEventHandler() {
+        for(int i =0; i<_EventNums; ++i){
+            NetException except;
+            con *delcon = (con*)_Events[i].data.ptr;
 
-        int ret = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
+            if(!delcon || !delcon->closecon.load())
+                continue;
 
-        if (ret <0 ) {
+            int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
+                                delcon->csock->getSocket(), 0);
+
+            if (ect < 0) {
+                except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
+                throw except;
+            }
+
+            delete delcon->csock;
+            DisconnectEvent(delcon);
+            delete delcon;
+        }
+        _EventNums = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
+
+        if (_EventNums <0 ) {
             NetException exception;
             exception[NetException::Error] << "waitEventHandler: epoll wait failure";
             throw exception;
         }
-        return ret;
+        return _EventNums;
     };
 
-    void poll::ConnectEventHandler(int pos) {
+    void poll::ConnectEventHandler(int pos)  {
         NetException exception;
         con *ccon;
         try {
             ccon = new con(this);
-            bool expected = false;
-            if(!ccon->conlock.compare_exchange_strong(expected,true)){
-                exception[NetException::Note] << "ConnectEventHandler: connection can'T lock this shoulden't happend";
-                throw exception;
-            }
             ccon->csock = _ServerSocket->accept();
             ccon->csock->setnonblocking();
+            ccon->closecon=false;
             std::string ip;
             ccon->csock->getAddress(ip);
             std::cout << "Connected: " << ip  << std::endl;
@@ -152,55 +163,26 @@ namespace netplus {
             int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent);
 
             if ( estate < 0 ) {
-                if(estate !=EEXIST){
-                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
-                    throw exception;
-                }else{
-                    exception[NetException::Note] << "ConnectEventHandler: connection already exists!";
-                    throw exception;
-                }
+                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
+                throw exception;
             }
-
-            try{
-                ConnectEvent(ccon);
-            }catch(NetException& e){
-                switch(e.getErrorType()){
-                    case NetException::Note:
-                        std::cout << e.what() << std::endl;
-                        break;
-                    default:
-                        std::cerr << e.what() << std::endl;
-                        break;
-                }
-            }
-
-            ccon->conlock.store(false);
+            ConnectEvent(ccon);
         } catch (NetException& e) {
             delete ccon->csock;
             delete ccon;
-            switch(e.getErrorType()){
-                case NetException::Note:
-                    std::cout << e.what() << std::endl;
-                    break;
-                default:
-                    throw e;
-            }
+            throw e;
         }
     };
 
     void poll::ReadEventHandler(int pos) {
         con *rcon = (con*)_Events[pos].data.ptr;
-        if (!rcon) {
-                NetException exp;
-                exp[NetException::Error] << "ReadEvent: No valied Connection! ";
-                throw exp;
-        }
         try {
             char buf[BLOCKSIZE];
             size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
-            if(rcvsize!=0)
+            if(rcvsize!=0){
                 rcon->addRecvQueue(buf, rcvsize);
-            RequestEvent(rcon);
+                RequestEvent(rcon);
+            }
         }
         catch (NetException& e) {
             throw e;
@@ -219,32 +201,21 @@ namespace netplus {
                 (void*)wcon->getSendData()->getData(),
                 wcon->getSendData()->getDataLength(), 0);
 
-            if(sended!=0)
+            if(sended!=0){
                 wcon->resizeSendQueue(sended);
-            ResponseEvent(wcon);
+                ResponseEvent(wcon);
+            }
         }
         catch (NetException& e) {
             throw e;
         }
     };
 
+
     void poll::CloseEventHandler(int pos) {
-        NetException except;
-        con *delcon = (con*)_Events[pos].data.ptr;
-
-        if(delcon->csock){
-            int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-                delcon->csock->getSocket(), 0);
-
-            if (ect < 0) {
-                except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
-                throw except;
-            }
-            delete delcon->csock;
-        }
-
-        DisconnectEvent(delcon);
-        delete delcon;
+        bool expected=false;
+        if(_Events[pos].data.ptr)
+            ((con*)_Events[pos].data.ptr)->closecon.compare_exchange_strong(expected,true);
     };
 
     /*Connection Ready to send Data*/
@@ -270,90 +241,81 @@ namespace netplus {
         }
     };
 
-    void poll::unlockCon(int pos){
-        con *ccon = (con*)_Events[pos].data.ptr;
-        if(ccon)
-            ccon->conlock.store(false);;
-    }
-
-    bool poll::trylockCon(int pos){
-        con *ccon = (con*)_Events[pos].data.ptr;
-        bool expected = false;
-        if(ccon)
-            return ccon->conlock.compare_exchange_strong(expected,true);
-        return false;
-    }
-
     bool event::_Run = true;
     bool event::_Restart = false;
 
-    struct WorkerArgs {
+    class WorkerArgs {
+    public:
         WorkerArgs(){
+            eventptr=nullptr;
+            pos=nullptr;
+            sync=nullptr;
+            tid=-1;
         };
 
         WorkerArgs(const WorkerArgs &args){
             eventptr=args.eventptr;
-            jobs=args.jobs;
+            pos=args.pos;
+            sync=args.sync;
+            tid=args.tid;
         };
 
-        std::mutex           sync;
-        eventapi*            eventptr;
-        int                  jobs;
+        ~WorkerArgs(){
+        };
+
+
+        eventapi                *eventptr;
+        std::atomic<int>        *pos;
+        std::mutex              *sync;
+        int                      tid;
     };
 
     class EventWorker{
     public:
-
         EventWorker(void* args) {
             eventapi* eventptr = ((WorkerArgs*)args)->eventptr;
             while (event::_Run) {
-                ((WorkerArgs*)args)->sync.lock();
-                for (int i = 0; i < ((WorkerArgs*)args)->jobs; ++i) {
-                    try {
-                        int state = eventptr->pollState(i);
-                        if(eventptr->trylockCon(i)){
-                            try{
-                                switch (state) {
-                                    case poll::EventHandlerStatus::EVIN:
-                                        eventptr->ReadEventHandler(i);
-                                        break;
-                                    case poll::EventHandlerStatus::EVOUT:
-                                        eventptr->WriteEventHandler(i);
-                                        break;
-                                    default:
-                                        NetException excep;
-                                        excep[NetException::Note] << "Eventworker: nothing todo close connection";
-                                        throw excep;
-                                }
-                                eventptr->unlockCon(i);
-                            }catch(NetException& e){
-                                eventptr->CloseEventHandler(i);
-                                throw e;
-                            }
-                        }else{
-                            switch (state) {
-                                case poll::EventHandlerStatus::EVCON:
-                                    eventptr->ConnectEventHandler(i);
-                                    break;
-                                case poll::EventHandlerStatus::EVWAIT:
-                                    continue;
-                                default:
-                                    break;
-                            }
-                        }
-                    } catch (NetException& e) {
-                        if (e.getErrorType() == NetException::Critical) {
-                            throw e;
-                        }
-                        if(e.getErrorType() != NetException::Note){
-                            std::cerr << e.what() << std::endl;
-                        }
-
+                ((WorkerArgs*)args)->sync->lock();
+                int i =((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].load();
+                try {
+                    int state = eventptr->pollState(i);
+                    switch (state) {
+                        case poll::EventHandlerStatus::EVCON:
+                            eventptr->ConnectEventHandler(i);
+                            break;
+                        default:
+                            break;
                     }
+                    try{
+                        switch (state) {
+                            case poll::EventHandlerStatus::EVIN:
+                                eventptr->ReadEventHandler(i);
+                                break;
+                            case poll::EventHandlerStatus::EVOUT:
+                                eventptr->WriteEventHandler(i);
+                                break;
+                            default:
+                                NetException excep;
+                                excep[NetException::Note] << "Eventworker: nothing todo close connection";
+                                throw excep;
+                        }
+                    }catch(NetException& e){
+                        eventptr->CloseEventHandler(i);
+                        throw e;
+                    }
+                } catch (NetException& e) {
+                    if (e.getErrorType() == NetException::Critical) {
+                        throw e;
+                    }
+                    if(e.getErrorType() != NetException::Note){
+                        std::cerr << e.what() << std::endl;
+                    }
+
                 }
-                ((WorkerArgs*)args)->sync.lock();
+                ((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].store(-1);
             }
         }
+
     };
 
     eventapi::~eventapi() {
@@ -388,21 +350,26 @@ namespace netplus {
     }
 
     void event::runEventloop() {
-        unsigned long thrs = sysconf(_SC_NPROCESSORS_ONLN);
+        size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
         initEventHandler();
     MAINWORKERLOOP:
         std::vector<WorkerArgs>  targs;
         std::vector<std::thread> thpool;
+        std::atomic<int>        *running;
+        running = new std::atomic<int> [thrs];
 
-        for (unsigned long i = 0; i < thrs; i++) {
+        for (size_t i = 0; i < thrs; i++) {
            try {
                 WorkerArgs args;
                 args.eventptr=this;
-                args.jobs=0;
-                args.sync.lock();
+                args.tid=i;
+                args.pos=running;
+                args.pos[i].store(-1);
+                args.sync=new std::mutex;
+                args.sync->lock();
                 targs.push_back(args);
-                thpool.push_back(std::thread([i,targs](){
+                thpool.push_back(std::thread([targs,i](){
                    new EventWorker((void*)&targs[i]);
                 }));
            }
@@ -411,15 +378,33 @@ namespace netplus {
            }
         }
 
-
-        int expected=0;
+        int epos=-1;
         while (event::_Run) {
             try {
-                int wait=waitEventHandler();
-                for(auto arg : targs){
-                    arg.jobs=wait;
-                    arg.sync.unlock();
+                if(epos<0){
+                    for(;;){
+                        bool stop=true;
+                        for(size_t i = 0; i < thrs;  ++i){
+                            if(running[i].load()!=-1)
+                                stop=false;
+                        }
+                        if(stop)
+                            break;
+                    }
+                    epos=waitEventHandler();
+                    --epos;
                 }
+
+                for(size_t i = 0; i < thrs; --epos){
+                    int expected=-1;
+                    if(epos<0)
+                        break;
+                    if( running[i].compare_exchange_strong(expected,epos)){
+                        targs[i].sync->unlock();
+                        i++;
+                    }
+                }
+
             }catch(NetException &e){
                 std::cerr << e.what() << std::endl;
             }
@@ -428,6 +413,12 @@ namespace netplus {
         for(std::vector<std::thread>::iterator thd = thpool.begin(); thd!=thpool.end();  ++thd){
             thd->join();
         }
+
+        for(size_t i = 0; i < thrs; i++){
+            delete[] targs[i].sync;
+        }
+
+        delete[] running;
 
         if (event::_Restart) {
             event::_Restart = false;

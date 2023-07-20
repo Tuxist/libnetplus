@@ -79,8 +79,7 @@ namespace netplus {
             /*set sending state*/
             void    sending(bool state);
 
-            /*connection locking*/
-            std::atomic<bool> conlock;
+            std::atomic<bool> closecon;
         protected:
             con();
             /*Incomming Data*/
