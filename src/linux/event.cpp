@@ -108,9 +108,9 @@ namespace netplus {
         if(!pcon)
             return EventHandlerStatus::EVCON;
 
-        if (pcon->getSendData()) {
+        if(pcon->getSendData())
             return EventHandlerStatus::EVOUT;
-        }
+
         return EventHandlerStatus::EVIN;
     }
 
@@ -126,7 +126,9 @@ namespace netplus {
                                 delcon->csock->getSocket(), 0);
 
             if (ect < 0) {
-                except[NetException::Error] << "CloseEvent can't delete Connection from epoll";
+                if(errno==ENOENT)
+                    continue;
+                except[NetException::Critical] << "CloseEvent can't delete Connection from epoll";
                 throw except;
             }
 
@@ -134,6 +136,7 @@ namespace netplus {
             DisconnectEvent(delcon);
             delete delcon;
         }
+
         _EventNums = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
 
         if (_EventNums <0 ) {
@@ -175,39 +178,35 @@ namespace netplus {
     };
 
     void poll::ReadEventHandler(int pos) {
+        NetException exception;
         con *rcon = (con*)_Events[pos].data.ptr;
-        try {
-            char buf[BLOCKSIZE];
-            size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
-            if(rcvsize!=0){
-                rcon->addRecvQueue(buf, rcvsize);
-                RequestEvent(rcon);
-            }
-        }
-        catch (NetException& e) {
-            throw e;
+        char buf[BLOCKSIZE];
+        size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+        if(rcvsize>0){
+            rcon->addRecvQueue(buf, rcvsize);
+            RequestEvent(rcon);
+        }else{
+            NetException exp;
+            exp[NetException::Note] << "ReadEvent: no data recived!";
+            throw exp;
         }
     };
 
     void poll::WriteEventHandler(int pos) {
+        NetException exception;
         con *wcon = (con*)_Events[pos].data.ptr;
-        try {
-            if(!wcon->getSendData()){
-                NetException exp;
-                exp[NetException::Note] << "WriteEvent: no data to send!";
-                throw exp;
-            }
-            size_t sended = _ServerSocket->sendData(wcon->csock,
-                (void*)wcon->getSendData()->getData(),
-                wcon->getSendData()->getDataLength(), 0);
-
-            if(sended!=0){
-                wcon->resizeSendQueue(sended);
-                ResponseEvent(wcon);
-            }
+        if(!wcon->getSendData()){
+            NetException exp;
+            exp[NetException::Note] << "WriteEvent: no data to send!";
+            throw exp;
         }
-        catch (NetException& e) {
-            throw e;
+        size_t sended = _ServerSocket->sendData(wcon->csock,
+            (void*)wcon->getSendData()->getData(),
+            wcon->getSendData()->getDataLength(), 0);
+
+        if(sended!=0){
+            wcon->resizeSendQueue(sended);
+            ResponseEvent(wcon);
         }
     };
 
@@ -378,35 +377,43 @@ namespace netplus {
            }
         }
 
-        int epos=-1;
+        int wait=-1;
         while (event::_Run) {
             try {
-                if(epos<0){
-                    for(;;){
-                        bool stop=true;
-                        for(size_t i = 0; i < thrs;  ++i){
-                            if(running[i].load()!=-1)
-                                stop=false;
-                        }
-                        if(stop)
-                            break;
+
+                if(wait<0){
+                    for(int i = 0; i< thrs; ++i){
+                        while(running[i].load()!=-1);
                     }
-                    epos=waitEventHandler();
-                    --epos;
+                    wait=(waitEventHandler()-1);
                 }
 
-                for(size_t i = 0; i < thrs; --epos){
+                for(int started=0; started<thrs; started++){
                     int expected=-1;
-                    if(epos<0)
+                    if(wait<0)
                         break;
-                    if( running[i].compare_exchange_strong(expected,epos)){
-                        targs[i].sync->unlock();
-                        i++;
+                    if(running[started].compare_exchange_strong(expected,wait)){
+                        targs[started].sync->unlock();
+                        --wait;
                     }
                 }
 
             }catch(NetException &e){
-                std::cerr << e.what() << std::endl;
+                switch(e.getErrorType()){
+                    case NetException::Note:
+                        std::cout << e.what() << std::endl;
+                        break;
+                    case NetException::Warning:
+                        std::cout << e.what() << std::endl;
+                        break;
+                    case NetException::Error:
+                        std::cerr << e.what() << std::endl;
+                        break;
+                    default:
+                        std::cerr << e.what() << std::endl;
+                        event::_Run=false;
+                        break;
+                }
             }
         }
 
