@@ -136,7 +136,7 @@ netplus::con::condata *netplus::con::getRecvData(){
   return _ReadDataFirst;
 }
 
-unsigned long netplus::con::getRecvLength(){
+size_t netplus::con::getRecvLength(){
   return _ReadDataLength;
 }
 
