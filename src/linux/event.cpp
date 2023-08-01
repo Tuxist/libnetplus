@@ -204,9 +204,13 @@ namespace netplus {
             (void*)wcon->getSendData()->getData(),
             wcon->getSendData()->getDataLength(), 0);
 
-        if(sended!=0){
+        if(sended>0){
             wcon->resizeSendQueue(sended);
             ResponseEvent(wcon);
+        }else{
+            NetException exp;
+            exp[NetException::Note] << "WriteEvent: no data sended";
+            throw exp;
         }
     };
 
