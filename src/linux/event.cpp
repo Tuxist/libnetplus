@@ -187,7 +187,7 @@ namespace netplus {
             RequestEvent(rcon);
         }else{
             NetException exp;
-            exp[NetException::Note] << "ReadEvent: no data recived!";
+            exp[NetException::Error] << "ReadEvent: no data recived!";
             throw exp;
         }
     };
@@ -209,7 +209,7 @@ namespace netplus {
             ResponseEvent(wcon);
         }else{
             NetException exp;
-            exp[NetException::Note] << "WriteEvent: no data sended";
+            exp[NetException::Error] << "WriteEvent: no data sended";
             throw exp;
         }
     };
