@@ -145,54 +145,52 @@ void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
 }
 
+bool netplus::con::issending() {
+    return _sending;
+}
+
+
 netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
                                                                size_t &qsize,size_t size){
     NetException exception;
-    if(!*firstdata || size > qsize || qsize==0 || size==0){
+    if (!*firstdata || size > qsize) {
         exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
         throw exception;
     }
-
 #ifdef DEBUG
-    int delsize=0,presize=qsize;
+    unsigned long delsize = 0, presize = qsize;
 #endif
-
-    qsize-=size;
-
+    qsize -= size;
 HAVEDATA:
-    if((*firstdata)) {
-            int curlen = ((int)(*firstdata)->getDataLength() - size);
-            if ( curlen <= 0 || curlen >= (*firstdata)->getDataLength()) {
-                size -= (*firstdata)->getDataLength();
+    if ((*firstdata)->getDataLength()<=size) {
 #ifdef DEBUG
-                delsize += (*firstdata)->getDataLength();
+        delsize += (*firstdata)->getDataLength();;
 #endif
-                condata* newdat = (*firstdata)->_nextConnectionData;
-                (*firstdata)->_nextConnectionData = nullptr;
-                if (*firstdata == *lastdata)
-                    (*lastdata) = nullptr;
-                delete* firstdata;
-                (*firstdata) = newdat;
-
-            }else{
-                std::string buf = (*firstdata)->_Data.substr(size,curlen);
-                (*firstdata)->_Data = buf;
-#ifdef DEBUG
-                delsize += size;
-#endif
-                size -= curlen;
-            }
-
-            if(size!=0)
-                goto HAVEDATA;
+        size -= (*firstdata)->getDataLength();
+        condata* newdat = (*firstdata)->_nextConnectionData;
+        (*firstdata)->_nextConnectionData = nullptr;
+        if (*firstdata == *lastdata)
+            (*lastdata) = nullptr;
+        delete* firstdata;
+        *firstdata = newdat;
+        if (*firstdata)
+            goto HAVEDATA;
     }
-
+    if (size != 0) {
 #ifdef DEBUG
-    // std::cout << " delsize: "    << delsize << ": " << size
-    //                              << " Calculated Blocksize: " << (presize-delsize)
-    //                              << " Planned size: " << qsize
-    //                              << std::endl;
-    if((unsigned long)(presize-delsize)!=qsize){
+        delsize += size;
+#endif
+        std::string buffer;
+        buffer = (*firstdata)->_Data.substr(size, (*firstdata)->_Data.length() - size);
+        (*firstdata)->_Data = buffer;
+        *firstdata = (*firstdata);
+    }
+#ifdef DEBUG
+    std ::cout << " delsize: " << delsize
+        << " Calculated Blocksize: " << (presize - delsize)
+        << " Planned size: " << qsize
+        << std::endl;
+    if ((presize - delsize) != qsize) {
         exception[NetException::Critical] << "_resizeQueue: Calculated wrong size";
         throw exception;
     }
@@ -200,7 +198,6 @@ HAVEDATA:
 
     return *firstdata;
 }
-
                                                                
 int netplus::con::copyValue(con::condata* startblock, size_t startpos,
     con::condata* endblock, size_t endpos, std::string& buffer) {

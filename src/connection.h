@@ -78,6 +78,7 @@ namespace netplus {
 
             /*set sending state*/
             void    sending(bool state);
+	    bool    issending();
 
             std::atomic<bool> closecon;
         protected:

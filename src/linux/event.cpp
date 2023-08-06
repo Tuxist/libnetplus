@@ -108,7 +108,7 @@ namespace netplus {
         if(!pcon)
             return EventHandlerStatus::EVCON;
 
-        if(pcon->getSendData())
+        if(pcon->issending())
             return EventHandlerStatus::EVOUT;
 
         return EventHandlerStatus::EVIN;
@@ -193,24 +193,28 @@ namespace netplus {
     };
 
     void poll::WriteEventHandler(int pos) {
-        NetException exception;
         con *wcon = (con*)_Events[pos].data.ptr;
         if(!wcon->getSendData()){
-            NetException exp;
-            exp[NetException::Note] << "WriteEvent: no data to send!";
-            throw exp;
+             wcon->sending(false);
+             return;
         }
         size_t sended = _ServerSocket->sendData(wcon->csock,
             (void*)wcon->getSendData()->getData(),
             wcon->getSendData()->getDataLength(), 0);
 
-        if(sended>0){
+        if(sended!=0){
+	    ResponseEvent(wcon);
             wcon->resizeSendQueue(sended);
-            ResponseEvent(wcon);
         }else{
-            NetException exp;
-            exp[NetException::Error] << "WriteEvent: no data sended";
-            throw exp;
+           NetException exp;
+	   switch(errno){
+                case EAGAIN:
+                    exp[NetException::Note] << "WriteEvent: Resource temporarily unavailable";
+                    throw exp;
+                default:
+                    exp[NetException::Error] << "WriteEvent: no data sended";
+                    throw exp;
+	    }
         }
     };
 
