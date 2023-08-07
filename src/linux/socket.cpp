@@ -40,15 +40,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 netplus::socket::socket(){
     _Socket=-1;
-    _SocketPtr = new struct sockaddr;
-    _SocketPtrSize=sizeof(sockaddr);
     bzero(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::socket::~socket(){
     if(_Socket>=0)
         close(_Socket);
-    delete (struct sockaddr*)_SocketPtr;
 }
 
 
@@ -127,6 +124,7 @@ netplus::tcp::~tcp(){
 }
 
 netplus::tcp::tcp() : socket(){
+    _SocketPtr=nullptr;
 }
 
 
@@ -316,10 +314,14 @@ netplus::udp::~udp(){
         ::close(_Socket);
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
+        delete (struct sockaddr_un*)_SocketPtr;
+    }else{
+        delete (struct sockaddr_in*)_SocketPtr;
     }
 }
 
 netplus::udp::udp() : socket(){
+    _SocketPtr=nullptr;
 }
 
 
@@ -483,11 +485,12 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 }
 
 netplus::ssl::ssl(){
-    
+    _SocketPtr=nullptr;
 }
 
 netplus::ssl::~ssl(){
     delete _Cert;
+    delete (struct sockaddr_in*)_SocketPtr;
     close(_Socket);
 }
 
