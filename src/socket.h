@@ -42,6 +42,7 @@ namespace netplus {
             
             
             virtual socket      *accept()=0;
+            virtual void         bind()=0;
             virtual void         listen()=0;
             
             virtual int          getMaxconnections()=0;
@@ -51,6 +52,9 @@ namespace netplus {
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size,int flags)=0;
             
+            virtual void connect(const char *addr,int port)=0;
+            virtual void connect(const char *path)=0;
+
             virtual void getAddress(std::string &addr)=0;
 
             int                 _Socket;
@@ -67,6 +71,7 @@ namespace netplus {
             ~tcp();
             
             socket       *accept();
+            void          bind();
             void          listen();
             
             int           getMaxconnections();
@@ -75,6 +80,9 @@ namespace netplus {
             unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+
+            void connect(const char *addr,int port);
+            void connect(const char *path);
 
             void getAddress(std::string &addr);
 
@@ -93,6 +101,7 @@ namespace netplus {
             ~udp();
 
             socket       *accept();
+            void          bind();
             void          listen();
 
             int           getMaxconnections();
@@ -101,6 +110,9 @@ namespace netplus {
             unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+
+            void connect(const char *addr,int port);
+            void connect(const char *path);
 
             void getAddress(std::string &addr);
 
@@ -117,6 +129,7 @@ namespace netplus {
             ~ssl();
             
             socket       *accept();
+            void          bind();
             void          listen();
             
             int           getMaxconnections();
@@ -126,6 +139,9 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
             
+            void connect(const char *addr,int port);
+            void connect(const char *path);
+
             void getAddress(std::string &addr);
 
         private:

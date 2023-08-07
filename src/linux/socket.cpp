@@ -72,14 +72,15 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     _Maxconnections=maxconnections;
-    struct sockaddr_un usock{0};
-    usock.sun_family = AF_UNIX;
+    _SocketPtr = new struct sockaddr_un;
+    memset(_SocketPtr,0,sizeof(struct sockaddr_un));
+    ((struct sockaddr_un *)_SocketPtr)->sun_family = AF_UNIX;
     if(!uxsocket){
         exception[NetException::Critical] << "Can't copy Server UnixSocket";
         throw exception;
     }
     _UxPath=uxsocket;
-    memcpy(usock.sun_path,uxsocket,strlen(uxsocket)+1);
+    memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
     
     if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, IPPROTO_TCP)) < 0){
         exception[NetException::Critical] << "Can't create Socket UnixSocket";
@@ -87,11 +88,6 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    
-    if (::bind(_Socket,((const struct sockaddr *)&usock), sizeof(struct sockaddr_un)) < 0){
-        exception[NetException::Error] << "Can't bind Server UnixSocket";
-        throw exception;
-    }
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -102,17 +98,15 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    _SocketPtr = new struct sockaddr_in;
+    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
+    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
+    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
     
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    
-    ::bind(_Socket,((const struct sockaddr *)&address),sizeof(address));
     
     if(_Socket <0){
         exception[NetException::Critical] << "Could not bind serversocket";
@@ -125,7 +119,11 @@ netplus::tcp::~tcp(){
         ::close(_Socket);
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
+        delete (struct sockaddr_un*)_SocketPtr;
+    }else{
+        delete (struct sockaddr_in*)_SocketPtr;
     }
+
 }
 
 netplus::tcp::tcp() : socket(){
@@ -156,6 +154,15 @@ netplus::socket *netplus::tcp::accept(){
     }
     return csock;
 }
+
+void netplus::tcp::bind(){
+    NetException exception;
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr_un)) < 0){
+        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        throw exception;
+    }
+}
+
 
 unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long size){
     return sendData(socket,data,size,0);
@@ -207,6 +214,14 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
+void netplus::tcp::connect(const char* addr, int port){
+    inet_pton(AF_INET, "127.0.0.1", (struct sockaddr *)_SocketPtr);
+}
+
+void netplus::tcp::connect(const char* path){
+}
+
+
 void netplus::tcp::getAddress(std::string &addr){
     char ipaddr[512];
     struct sockaddr_in sockaddr;
@@ -223,14 +238,16 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     _Maxconnections=maxconnections;
-    struct sockaddr_un usock{0};
-    usock.sun_family = AF_UNIX;
+
+    _SocketPtr = new struct sockaddr_un;
+    memset(_SocketPtr,0,sizeof(struct sockaddr_un));
+    ((struct sockaddr_un *)_SocketPtr)->sun_family = AF_UNIX;
     if(!uxsocket){
         exception[NetException::Critical] << "Can't copy Server UnixSocket";
         throw exception;
     }
     _UxPath=uxsocket;
-    memcpy(usock.sun_path,uxsocket,strlen(uxsocket)+1);
+    memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
 
     if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, IPPROTO_UDP)) < 0){
         exception[NetException::Critical] << "Can't create Socket UnixSocket";
@@ -239,10 +256,6 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
 
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
 
-    if (::bind(_Socket,((const struct sockaddr *)&usock), sizeof(struct sockaddr_un)) < 0){
-        exception[NetException::Error] << "Can't bind Server UnixSocket";
-        throw exception;
-    }
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -253,17 +266,15 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_UDP);
 
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    _SocketPtr = new struct sockaddr_in;
+    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
+    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
+    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-
-    ::bind(_Socket,((const struct sockaddr *)&address),sizeof(address));
 
     if(_Socket <0){
         exception[NetException::Critical] << "Could not bind serversocket";
@@ -307,6 +318,15 @@ netplus::socket *netplus::udp::accept(){
     }
     return csock;
 }
+
+void netplus::udp::bind(){
+    NetException exception;
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr_un)) < 0){
+        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        throw exception;
+    }
+}
+
 
 unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long size){
     return sendData(socket,data,size,0);
@@ -377,18 +397,16 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     
     _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     
-    struct sockaddr_in address;
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
+    _SocketPtr = new struct sockaddr_in;
+    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
+    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
+    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
     
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    
-    ::bind(_Socket,((const struct sockaddr *)&address),sizeof(address));
-    
+
     if(_Socket <0){
         exception[NetException::Critical] << "Could not bind serversocket";
         throw exception;
@@ -419,6 +437,14 @@ netplus::socket *netplus::ssl::accept(){
         throw exception;
     }
     return csock;
+}
+
+void netplus::ssl::bind(){
+    NetException exception;
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr_un)) < 0){
+        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        throw exception;
+    }
 }
 
 void netplus::ssl::listen(){

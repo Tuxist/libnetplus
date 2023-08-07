@@ -73,7 +73,7 @@ namespace netplus {
         NetException exception;
         _ServerSocket->setnonblocking();
         _ServerSocket->listen();
-
+        _ServerSocket->bind();
 
         struct poll_event setevent = (struct poll_event){
             0
