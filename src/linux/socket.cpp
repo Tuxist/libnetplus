@@ -215,10 +215,39 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 }
 
 void netplus::tcp::connect(const char* addr, int port){
-    inet_pton(AF_INET, "127.0.0.1", (struct sockaddr *)_SocketPtr);
+    NetException exception;
+
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+
+    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
+        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
+        throw exception;
+    }
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
 }
 
 void netplus::tcp::connect(const char* path){
+    NetException exception;
+
+    struct sockaddr_un serv_addr;
+
+    if(strlen(path)>107){
+        exception[NetException::Error] << "Socket connect: unix path too long ";
+        throw exception;
+    }
+
+    memcpy(serv_addr.sun_path,path,strlen(path)+1);
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
 }
 
 
@@ -378,6 +407,42 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
+void netplus::udp::connect(const char* addr, int port){
+    NetException exception;
+
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+
+    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
+        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
+        throw exception;
+    }
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
+}
+
+void netplus::udp::connect(const char* path){
+    NetException exception;
+
+    struct sockaddr_un serv_addr;
+
+    if(strlen(path)>107){
+        exception[NetException::Error] << "Socket connect: unix path too long ";
+        throw exception;
+    }
+
+    memcpy(serv_addr.sun_path,path,strlen(path)+1);
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
+}
+
 void netplus::udp::getAddress(std::string &addr){
     char ipaddr[512];
     struct sockaddr_in sockaddr;
@@ -506,6 +571,42 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
         throw exception;
     }
     return recvsize;    
+}
+
+void netplus::ssl::connect(const char* addr, int port){
+    NetException exception;
+
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+
+    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
+        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
+        throw exception;
+    }
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
+}
+
+void netplus::ssl::connect(const char* path){
+    NetException exception;
+
+    struct sockaddr_un serv_addr;
+
+    if(strlen(path)>107){
+        exception[NetException::Error] << "Socket connect: unix path too long ";
+        throw exception;
+    }
+
+    memcpy(serv_addr.sun_path,path,strlen(path)+1);
+
+    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        throw exception;
+    }
 }
 
 void netplus::ssl::getAddress(std::string &addr){

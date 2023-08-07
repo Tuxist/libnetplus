@@ -71,9 +71,9 @@ namespace netplus {
     /*event handler function*/
     void poll::initEventHandler() {
         NetException exception;
+        _ServerSocket->bind();
         _ServerSocket->setnonblocking();
         _ServerSocket->listen();
-        _ServerSocket->bind();
 
         struct poll_event setevent = (struct poll_event){
             0
