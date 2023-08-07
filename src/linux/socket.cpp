@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 netplus::socket::socket(){
     _Socket=-1;
-    bzero(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::socket::~socket(){
