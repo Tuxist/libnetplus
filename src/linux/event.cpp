@@ -390,13 +390,13 @@ namespace netplus {
             try {
 
                 if(wait<0){
-                    for(int i = 0; i< thrs; ++i){
+                    for(size_t i = 0; i< thrs; ++i){
                         while(running[i].load()!=-1);
                     }
                     wait=(waitEventHandler()-1);
                 }
 
-                for(int started=0; started<thrs; started++){
+                for(size_t started=0; started<thrs; started++){
                     int expected=-1;
                     if(wait<0)
                         break;

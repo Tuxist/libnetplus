@@ -217,6 +217,157 @@ void netplus::tcp::getAddress(std::string &addr){
     addr=ipaddr;
 }
 
+netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
+    NetException exception;
+    int optval = 1;
+    if(sockopts == -1)
+        sockopts=SO_REUSEADDR;
+    _Maxconnections=maxconnections;
+    struct sockaddr_un usock{0};
+    usock.sun_family = AF_UNIX;
+    if(!uxsocket){
+        exception[NetException::Critical] << "Can't copy Server UnixSocket";
+        throw exception;
+    }
+    _UxPath=uxsocket;
+    memcpy(usock.sun_path,uxsocket,strlen(uxsocket)+1);
+
+    if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, IPPROTO_UDP)) < 0){
+        exception[NetException::Critical] << "Can't create Socket UnixSocket";
+        throw exception;
+    }
+
+    setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
+
+    if (::bind(_Socket,((const struct sockaddr *)&usock), sizeof(struct sockaddr_un)) < 0){
+        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        throw exception;
+    }
+}
+
+netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
+    NetException exception;
+    _Maxconnections=maxconnections;
+    if(sockopts == -1)
+        sockopts=SO_REUSEADDR;
+
+    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_UDP);
+
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+
+
+    int optval = 1;
+    setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
+
+    ::bind(_Socket,((const struct sockaddr *)&address),sizeof(address));
+
+    if(_Socket <0){
+        exception[NetException::Critical] << "Could not bind serversocket";
+        throw exception;
+    }
+}
+
+netplus::udp::~udp(){
+    if(_Socket>=0)
+        ::close(_Socket);
+    if(!_UxPath.empty()){
+        unlink(_UxPath.c_str());
+    }
+}
+
+netplus::udp::udp() : socket(){
+}
+
+
+void netplus::udp::listen(){
+    NetException exception;
+    if(::listen(_Socket,_Maxconnections) < 0){
+        exception[NetException::Critical] << "Can't listen Server Socket";
+        throw exception;
+    }
+}
+
+int netplus::udp::getMaxconnections(){
+    return _Maxconnections;
+}
+
+netplus::socket *netplus::udp::accept(){
+    NetException exception;
+    socket *csock=new udp();
+    csock->_Socket = ::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,&csock->_SocketPtrSize);
+    if(csock->_Socket<0){
+        delete csock;
+        csock=nullptr;
+        exception[NetException::Error] << "Can't accept on Socket";
+        throw exception;
+    }
+    return csock;
+}
+
+unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long size){
+    return sendData(socket,data,size,0);
+}
+
+unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long size,int flags){
+    NetException exception;
+    if(!socket){
+        exception[NetException::Error] << "Socket sendata failed invalid socket !";
+        throw exception;
+    }
+    int rval=::sendto(socket->_Socket,
+                        data,
+                        size,
+                        flags,
+                        (struct sockaddr *)&socket->_SocketPtr,
+                        socket->_SocketPtrSize
+                     );
+    if(rval<0){
+        exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
+        throw exception;
+    }
+    return rval;
+}
+
+
+unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long size){
+    return recvData(socket,data,size,0);
+}
+
+unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long size,int flags){
+    NetException exception;
+    if(!socket){
+        exception[NetException::Error] << "Socket recvdata failed invalid socket!";
+        throw exception;
+    }
+    int recvsize=::recvfrom(socket->_Socket,
+                            data,
+                            size,
+                            flags,
+                            (struct sockaddr *)&socket->_SocketPtr,
+                            &socket->_SocketPtrSize
+                         );
+    if(recvsize<0){
+        exception[NetException::Error] << "Socket recvdata failed on Socket: "
+                                          << socket->_Socket;
+        throw exception;
+    }
+    return recvsize;
+}
+
+void netplus::udp::getAddress(std::string &addr){
+    char ipaddr[512];
+    struct sockaddr_in sockaddr;
+    socklen_t iplen = sizeof(sockaddr);
+    bzero(&sockaddr, sizeof(sockaddr));
+    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
+    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    addr=ipaddr;
+}
+
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : socket() {
     NetException exception;

@@ -84,6 +84,32 @@ namespace netplus {
             std::string     _UxPath;
         };
         
+        class udp : public socket{
+        public:
+            udp(const char *uxsocket,int maxconnections,
+                int sockopts);
+            udp(const char *addr,int port,int maxconnections,
+                int sockopts);
+            ~udp();
+
+            socket       *accept();
+            void          listen();
+
+            int           getMaxconnections();
+
+            unsigned int sendData(socket *socket,void *data,unsigned long size);
+            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
+            unsigned int recvData(socket *socket,void *data,unsigned long size);
+            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+
+            void getAddress(std::string &addr);
+
+        private:
+            udp();
+            int             _Maxconnections;
+            std::string     _UxPath;
+        };
+
         class ssl : public socket{
         public:
             ssl(const char *addr,int port,int maxconnections,
@@ -108,5 +134,8 @@ namespace netplus {
             std::string      _UxPath;
             size_t           _Cipher;
             cryptplus::x509 *_Cert;
+        };
+
+        class quick : public socket{
         };
 };
