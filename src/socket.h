@@ -52,8 +52,7 @@ namespace netplus {
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size,int flags)=0;
             
-            virtual void connect(const char *addr,int port)=0;
-            virtual void connect(const char *path)=0;
+            virtual void connect()=0;
 
             virtual void getAddress(std::string &addr)=0;
 
@@ -81,8 +80,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            void connect(const char *addr,int port);
-            void connect(const char *path);
+            void connect();
 
             void getAddress(std::string &addr);
 
@@ -111,8 +109,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            void connect(const char *addr,int port);
-            void connect(const char *path);
+            void connect();
 
             void getAddress(std::string &addr);
 
@@ -139,8 +136,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
             
-            void connect(const char *addr,int port);
-            void connect(const char *path);
+            void connect();
 
             void getAddress(std::string &addr);
 

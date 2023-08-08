@@ -97,7 +97,12 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
-    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+
+    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+        exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
+        throw exception;
+    }
+
     ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
     
     
@@ -211,37 +216,9 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-void netplus::tcp::connect(const char* addr, int port){
+void netplus::tcp::connect(){
     NetException exception;
-
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
-
-    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
-        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
-        throw exception;
-    }
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
-        throw exception;
-    }
-}
-
-void netplus::tcp::connect(const char* path){
-    NetException exception;
-
-    struct sockaddr_un serv_addr;
-
-    if(strlen(path)>107){
-        exception[NetException::Error] << "Socket connect: unix path too long ";
-        throw exception;
-    }
-
-    memcpy(serv_addr.sun_path,path,strlen(path)+1);
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
@@ -295,7 +272,12 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
-    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+
+    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+        exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
+        throw exception;
+    }
+
     ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
 
 
@@ -408,37 +390,9 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-void netplus::udp::connect(const char* addr, int port){
+void netplus::udp::connect(){
     NetException exception;
-
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
-
-    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
-        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
-        throw exception;
-    }
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
-        throw exception;
-    }
-}
-
-void netplus::udp::connect(const char* path){
-    NetException exception;
-
-    struct sockaddr_un serv_addr;
-
-    if(strlen(path)>107){
-        exception[NetException::Error] << "Socket connect: unix path too long ";
-        throw exception;
-    }
-
-    memcpy(serv_addr.sun_path,path,strlen(path)+1);
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
@@ -466,7 +420,12 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
-    ((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr = INADDR_ANY;
+
+    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+        exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
+        throw exception;
+    }
+
     ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
     
     
@@ -575,37 +534,9 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
     return recvsize;    
 }
 
-void netplus::ssl::connect(const char* addr, int port){
+void netplus::ssl::connect(){
     NetException exception;
-
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
-
-    if(::inet_pton(AF_INET, addr, (struct sockaddr *)&serv_addr.sin_addr) <= 0){
-        exception[NetException::Error] << "Socket connect: Invalid address aborting ";
-        throw exception;
-    }
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
-        throw exception;
-    }
-}
-
-void netplus::ssl::connect(const char* path){
-    NetException exception;
-
-    struct sockaddr_un serv_addr;
-
-    if(strlen(path)>107){
-        exception[NetException::Error] << "Socket connect: unix path too long ";
-        throw exception;
-    }
-
-    memcpy(serv_addr.sun_path,path,strlen(path)+1);
-
-    if (::connect(_Socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
