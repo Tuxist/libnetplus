@@ -214,12 +214,16 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-void netplus::tcp::connect(){
+netplus::socket* netplus::tcp::connect(){
     NetException exception;
-    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
+    int sock=0;
+    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+    socket *clntsock=new tcp();
+    clntsock->_Socket=sock;
+    return clntsock;
 }
 
 
@@ -386,12 +390,16 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-void netplus::udp::connect(){
+netplus::socket* netplus::udp::connect(){
     NetException exception;
-    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting "<< strerror(errno);
+    int sock=0;
+    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+    socket *clntsock=new udp();
+    clntsock->_Socket=sock;
+    return clntsock;
 }
 
 void netplus::udp::getAddress(std::string &addr){
@@ -528,12 +536,16 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
     return recvsize;    
 }
 
-void netplus::ssl::connect(){
+netplus::socket* netplus::ssl::connect(){
     NetException exception;
-    if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
+    int sock=0;
+    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+    socket *clntsock=new ssl();
+    clntsock->_Socket=sock;
+    return clntsock;
 }
 
 void netplus::ssl::getAddress(std::string &addr){
