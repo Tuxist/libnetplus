@@ -324,7 +324,7 @@ netplus::socket *netplus::udp::accept(){
 void netplus::udp::bind(){
     NetException exception;
     if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr)) < 0){
-        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
 }
@@ -453,7 +453,7 @@ netplus::socket *netplus::ssl::accept(){
 void netplus::ssl::bind(){
     NetException exception;
     if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr)) < 0){
-        exception[NetException::Error] << "Can't bind Server UnixSocket";
+        exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
 }
