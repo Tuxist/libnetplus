@@ -80,7 +80,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            socket* connect();
+            tcp* connect();
 
             void getAddress(std::string &addr);
 
@@ -109,7 +109,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            socket* connect();
+            udp* connect();
 
             void getAddress(std::string &addr);
 
@@ -136,7 +136,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
             
-            socket* connect();
+            ssl* connect();
 
             void getAddress(std::string &addr);
 

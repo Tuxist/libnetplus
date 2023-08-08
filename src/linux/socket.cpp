@@ -214,14 +214,14 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-netplus::socket* netplus::tcp::connect(){
+netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;
     if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    socket *clntsock=new tcp();
+    tcp *clntsock=new tcp();
     clntsock->_Socket=sock;
     return clntsock;
 }
@@ -390,14 +390,14 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
     return recvsize;
 }
 
-netplus::socket* netplus::udp::connect(){
+netplus::udp* netplus::udp::connect(){
     NetException exception;
     int sock=0;
     if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    socket *clntsock=new udp();
+    udp *clntsock=new udp();
     clntsock->_Socket=sock;
     return clntsock;
 }
@@ -536,14 +536,14 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
     return recvsize;    
 }
 
-netplus::socket* netplus::ssl::connect(){
+netplus::ssl* netplus::ssl::connect(){
     NetException exception;
     int sock=0;
     if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    socket *clntsock=new ssl();
+    ssl *clntsock=new ssl();
     clntsock->_Socket=sock;
     return clntsock;
 }
