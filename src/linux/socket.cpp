@@ -108,11 +108,6 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    
-    if(_Socket <0){
-        exception[NetException::Critical] << "Could not bind serversocket";
-        throw exception;
-    }
 }
                                         
 netplus::tcp::~tcp(){
@@ -283,11 +278,6 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-
-    if(_Socket <0){
-        exception[NetException::Critical] << "Could not bind serversocket";
-        throw exception;
-    }
 }
 
 netplus::udp::~udp(){
@@ -431,11 +421,6 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-
-    if(_Socket <0){
-        exception[NetException::Critical] << "Could not bind serversocket";
-        throw exception;
-    }
     
     _Cert = new cryptplus::x509(cert,certlen);
     write(1,key,keylen);
