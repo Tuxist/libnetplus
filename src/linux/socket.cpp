@@ -78,8 +78,8 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     _UxPath=uxsocket;
     memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
     
-    if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, IPPROTO_TCP)) < 0){
-        exception[NetException::Critical] << "Can't create Socket UnixSocket";
+    if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, 0)) < 0){
+        exception[NetException::Critical] << "Can't create TCP UnixSocket";
         throw exception;
     }
     
@@ -92,8 +92,11 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
-    
+    if ((_Socket=::socket(AF_INET,SOCK_STREAM, 0)) < 0){
+        exception[NetException::Critical] << "Can't create TCP Socket";
+        throw exception;
+    }
+
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
@@ -247,8 +250,8 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     _UxPath=uxsocket;
     memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
 
-    if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, IPPROTO_UDP)) < 0){
-        exception[NetException::Critical] << "Can't create Socket UnixSocket";
+    if ((_Socket=::socket(AF_UNIX,SOCK_DGRAM, IPPROTO_UDP)) < 0){
+        exception[NetException::Critical] << "Can't create UDP UnixSocket";
         throw exception;
     }
 
@@ -262,13 +265,16 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
 
-    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_UDP);
+    if ((_Socket=::socket(AF_INET,SOCK_DGRAM, 0)) < 0){
+        exception[NetException::Critical] << "Can't create UDP Socket";
+        throw exception;
+    }
 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
 
-    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr) <= 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
@@ -383,7 +389,7 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
 void netplus::udp::connect(){
     NetException exception;
     if (::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting "<< strerror(errno);
         throw exception;
     }
 }
@@ -405,8 +411,11 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    _Socket = ::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
-    
+    if ((_Socket=::socket(AF_INET,SOCK_STREAM, 0)) < 0){
+        exception[NetException::Critical] << "Can't create SSL Socket";
+        throw exception;
+    }
+
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
     ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
