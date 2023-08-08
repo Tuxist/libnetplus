@@ -350,12 +350,10 @@ unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long si
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
         throw exception;
     }
-    int rval=::sendto(socket->_Socket,
+    int rval=::send(socket->_Socket,
                         data,
                         size,
-                        flags,
-                        (struct sockaddr *)&socket->_SocketPtr,
-                        socket->_SocketPtrSize
+                        flags
                      );
     if(rval<0){
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
@@ -375,12 +373,10 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
         throw exception;
     }
-    int recvsize=::recvfrom(socket->_Socket,
+    int recvsize=::recv(socket->_Socket,
                             data,
                             size,
-                            flags,
-                            (struct sockaddr *)&socket->_SocketPtr,
-                            &socket->_SocketPtrSize
+                            flags
                          );
     if(recvsize<0){
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
