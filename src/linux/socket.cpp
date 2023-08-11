@@ -182,6 +182,9 @@ unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long si
                         socket->_SocketPtrSize
                      );
     if(rval<0){
+        if(errno==EAGAIN)
+            return 0;
+
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -207,6 +210,8 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
                             &socket->_SocketPtrSize
                          );
     if(recvsize<0){
+        if(errno==EAGAIN)
+            return 0;
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
@@ -356,6 +361,8 @@ unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long si
                         flags
                      );
     if(rval<0){
+        if(errno==EAGAIN)
+            return 0;
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -379,6 +386,8 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
                             flags
                          );
     if(recvsize<0){
+        if(errno==EAGAIN)
+            return 0;
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
@@ -501,6 +510,8 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
                         socket->_SocketPtrSize
                      );
     if(rval<0){
+        if(errno==EAGAIN)
+            return 0;
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -525,6 +536,8 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
                             &socket->_SocketPtrSize
                          );
     if(recvsize<0){
+        if(errno==EAGAIN)
+            return 0;
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
