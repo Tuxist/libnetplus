@@ -61,7 +61,7 @@ int netplus::socket::getSocket(){
     return _Socket;
 }
 
-netplus::tcp::tcp(netplus::tcp& ctcp){
+netplus::tcp::tcp(const netplus::tcp& ctcp){
     _Socket=ctcp._Socket;
     if(_UxPath.empty())
         _SocketPtr=new struct sockaddr_in;
@@ -253,7 +253,7 @@ void netplus::tcp::getAddress(std::string &addr){
     addr=ipaddr;
 }
 
-netplus::udp::udp(netplus::udp& cudp){
+netplus::udp::udp(const netplus::udp& cudp){
     _Socket=cudp._Socket;
     if(_UxPath.empty())
         _SocketPtr=new struct sockaddr_in;
