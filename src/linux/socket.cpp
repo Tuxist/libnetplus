@@ -61,6 +61,17 @@ int netplus::socket::getSocket(){
     return _Socket;
 }
 
+netplus::tcp::tcp(netplus::tcp& ctcp){
+    _Socket=ctcp._Socket;
+    if(_UxPath.empty())
+        _SocketPtr=new struct sockaddr_in;
+    else
+        _SocketPtr=new struct sockaddr_un;
+
+    memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
+
+    _SocketPtrSize=ctcp._SocketPtrSize;
+}
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
     NetException exception;
@@ -241,6 +252,19 @@ void netplus::tcp::getAddress(std::string &addr){
     inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
     addr=ipaddr;
 }
+
+netplus::udp::udp(netplus::udp& cudp){
+    _Socket=cudp._Socket;
+    if(_UxPath.empty())
+        _SocketPtr=new struct sockaddr_in;
+    else
+        _SocketPtr=new struct sockaddr_un;
+
+    memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
+
+    _SocketPtrSize=cudp._SocketPtrSize;
+}
+
 
 netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
     NetException exception;

@@ -63,6 +63,7 @@ namespace netplus {
         
         class tcp : public socket{
         public:
+            tcp(netplus::tcp& ctcp);
             tcp(const char *uxsocket,int maxconnections,
                 int sockopts);
             tcp(const char *addr,int port,int maxconnections,
@@ -92,6 +93,7 @@ namespace netplus {
         
         class udp : public socket{
         public:
+            udp(udp &cudp);
             udp(const char *uxsocket,int maxconnections,
                 int sockopts);
             udp(const char *addr,int port,int maxconnections,
