@@ -255,12 +255,13 @@ void netplus::tcp::getAddress(std::string &addr){
 
 netplus::udp::udp(const netplus::udp& cudp){
     _Socket=cudp._Socket;
-    if(_UxPath.empty())
+    if(_UxPath.empty()){
         _SocketPtr=new struct sockaddr_in;
-    else
+        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(struct sockaddr_in));
+    }else{
         _SocketPtr=new struct sockaddr_un;
-
-    memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
+        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(struct sockaddr_un));
+    }
 
     _SocketPtrSize=cudp._SocketPtrSize;
 }
