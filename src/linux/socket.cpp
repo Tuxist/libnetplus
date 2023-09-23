@@ -138,6 +138,8 @@ netplus::tcp::~tcp(){
 
 netplus::tcp::tcp() : socket(){
     _SocketPtr=nullptr;
+    _SocketPtr = new struct sockaddr_in;
+    _SocketPtrSize = sizeof(struct sockaddr_in);
 }
 
 
@@ -245,11 +247,7 @@ netplus::tcp* netplus::tcp::connect(){
 
 void netplus::tcp::getAddress(std::string &addr){
     char ipaddr[512];
-    struct sockaddr_in sockaddr;
-    socklen_t iplen = sizeof(sockaddr);
-    bzero(&sockaddr, sizeof(sockaddr));
-    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
-    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    inet_ntop(AF_INET, &((struct sockaddr_in *)_SocketPtr)->sin_addr, ipaddr, _SocketPtrSize);
     addr=ipaddr;
 }
 
