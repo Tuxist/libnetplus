@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #include "exception.h"
 #include "socket.h"
@@ -103,22 +104,42 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    if ((_Socket=::socket(AF_INET,SOCK_STREAM, 0)) < 0){
+    if ((_Socket=::socket(AF_UNSPEC,SOCK_STREAM, 0)) < 0){
         exception[NetException::Critical] << "Can't create TCP Socket";
         throw exception;
     }
 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
-    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
 
-    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+    _SocketPtrSize=0;
+
+    struct addrinfo hints,*result,*rp;
+
+    int tsock;
+
+    char serv[512];
+    snprintf(serv,512,"%d",port);
+
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
 
-    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
-    
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        _Socket = ::socket(rp->ai_family, rp->ai_socktype,
+                            rp->ai_protocol);
+        if (_Socket == -1)
+            continue;
+
+        try{
+            bind();
+        }catch(...){
+            close(_Socket);
+        }
+    }
+
+    ::freeaddrinfo(result);
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
@@ -304,15 +325,34 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
-    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
 
-    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr) <= 0) {
+    _SocketPtrSize=0;
+
+    struct addrinfo hints,*result,*rp;
+
+    int tsock;
+    char serv[512];
+    snprintf(serv,512,"%d",port);
+
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
 
-    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        _Socket = ::socket(rp->ai_family, rp->ai_socktype,
+                            rp->ai_protocol);
+        if (_Socket == -1)
+            continue;
 
+        try{
+            bind();
+        }catch(...){
+            close(_Socket);
+        }
+    }
+
+    ::freeaddrinfo(result);
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
@@ -454,14 +494,35 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
-    ((struct sockaddr_in*)_SocketPtr)->sin_family = AF_INET;
 
-    if (inet_pton(AF_INET, addr,&((struct sockaddr_in*)_SocketPtr)->sin_addr.s_addr) <= 0) {
+    _SocketPtrSize=0;
+
+    struct addrinfo hints,*result,*rp;
+
+    int tsock;
+
+    char serv[512];
+    snprintf(serv,512,"%d",port);
+
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
 
-    ((struct sockaddr_in*)_SocketPtr)->sin_port = htons(port);
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        _Socket = ::socket(rp->ai_family, rp->ai_socktype,
+                            rp->ai_protocol);
+        if (_Socket == -1)
+            continue;
+
+        try{
+            bind();
+        }catch(...){
+            close(_Socket);
+        }
+    }
+
+    ::freeaddrinfo(result);
     
     
     int optval = 1;
