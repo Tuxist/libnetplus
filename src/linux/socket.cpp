@@ -138,12 +138,12 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 
         try{
             bind();
-            goto FINSIHADDRINFO;
+            break;
         }catch(...){
             ::close(_Socket);
         }
     }
-FINSIHADDRINFO:
+
     ::freeaddrinfo(result);
     
     int optval = 1;
@@ -351,18 +351,18 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
-                           rp->ai_protocol);
+                            rp->ai_protocol);
         if (_Socket == -1)
             continue;
 
         try{
             bind();
-            goto FINSIHADDRINFO;
+            break;
         }catch(...){
             ::close(_Socket);
         }
     }
-FINSIHADDRINFO:
+
     ::freeaddrinfo(result);
 
     int optval = 1;
@@ -526,18 +526,18 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
-                           rp->ai_protocol);
+                            rp->ai_protocol);
         if (_Socket == -1)
             continue;
 
         try{
             bind();
-            goto FINSIHADDRINFO;
+            break;
         }catch(...){
             ::close(_Socket);
         }
     }
-FINSIHADDRINFO:
+
     ::freeaddrinfo(result);
     
     
