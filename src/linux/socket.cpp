@@ -125,7 +125,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     char serv[512];
     snprintf(serv,512,"%d",port);
 
-    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) < 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
@@ -139,12 +139,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
 
-        try{
-            bind();
-            break;
-        }catch(...){
-            ::close(_Socket);
-        }
+        break;
     }
 
     ::freeaddrinfo(result);
@@ -347,7 +342,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
     char serv[512];
     snprintf(serv,512,"%d",port);
 
-    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) < 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
@@ -360,13 +355,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
-
-        try{
-            bind();
-            break;
-        }catch(...){
-            ::close(_Socket);
-        }
+        break;
     }
 
     ::freeaddrinfo(result);
@@ -525,7 +514,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     char serv[512];
     snprintf(serv,512,"%d",port);
 
-    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) <= 0) {
+    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) < 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
@@ -538,13 +527,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
-
-        try{
-            bind();
-            break;
-        }catch(...){
-            ::close(_Socket);
-        }
+        break;
     }
 
     ::freeaddrinfo(result);
