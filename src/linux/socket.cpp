@@ -136,6 +136,9 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
         if (_Socket == -1)
             continue;
 
+        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
+        _SocketPtrSize=rp->ai_addrlen;
+
         try{
             bind();
             break;
@@ -355,6 +358,9 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
         if (_Socket == -1)
             continue;
 
+        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
+        _SocketPtrSize=rp->ai_addrlen;
+
         try{
             bind();
             break;
@@ -529,6 +535,9 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
                             rp->ai_protocol);
         if (_Socket == -1)
             continue;
+
+        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
+        _SocketPtrSize=rp->ai_addrlen;
 
         try{
             bind();
