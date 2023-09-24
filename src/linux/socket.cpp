@@ -138,6 +138,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 
         try{
             bind();
+            break;
         }catch(...){
             close(_Socket);
         }
@@ -356,6 +357,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
         try{
             bind();
+            break;
         }catch(...){
             close(_Socket);
         }
@@ -530,6 +532,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
         try{
             bind();
+            break;
         }catch(...){
             close(_Socket);
         }
