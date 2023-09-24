@@ -1,27 +1,27 @@
-#libnetplus
+# libnetplus
 
-##Features
--eventpolling
--tcp/udp server and clients connections
--connection pool
--threading support
--ipv4/6 support
--unixsockets
+## Features
+- eventpolling
+- tcp/udp server and clients connections
+- connection pool
+- threading support
+- ipv4/6 support
+- unixsockets
 
-###on work 
--tls support
+### on work 
+- tls support
 
-###todo
--quick support
--kqueue support(bsd)
--iocp support (windows)
+### todo
+- quick support
+- kqueue support(bsd)
+- iocp support (windows)
 
-##Dependencies
--linux 2.6 upwards
--clang/gcc (cpp14 or higher)
--cmake
--libcryptoplus
--libc (musl and glibc testet)
+## Dependencies
+- linux 2.6 upwards
+- clang/gcc (cpp14 or higher)
+- cmake
+- libcryptoplus
+- libc (musl and glibc testet)
 
 ## Howto build
 - cd projectdir
