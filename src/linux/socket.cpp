@@ -104,17 +104,21 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    if ((_Socket=::socket(AF_UNSPEC,SOCK_STREAM, 0)) < 0){
-        exception[NetException::Critical] << "Can't create TCP Socket";
-        throw exception;
-    }
-
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
 
-    _SocketPtrSize=0;
+    _SocketPtrSize=sizeof(struct sockaddr_in);
 
     struct addrinfo hints,*result,*rp;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
 
     int tsock;
 
@@ -128,7 +132,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
-                            rp->ai_protocol);
+                           rp->ai_protocol);
         if (_Socket == -1)
             continue;
 
@@ -318,17 +322,22 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
 
-    if ((_Socket=::socket(AF_INET,SOCK_DGRAM, 0)) < 0){
-        exception[NetException::Critical] << "Can't create UDP Socket";
-        throw exception;
-    }
-
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
 
-    _SocketPtrSize=0;
+    _SocketPtrSize=sizeof(struct sockaddr_in);
 
     struct addrinfo hints,*result,*rp;
+
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
 
     int tsock;
     char serv[512];
@@ -487,17 +496,21 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    if ((_Socket=::socket(AF_INET,SOCK_STREAM, 0)) < 0){
-        exception[NetException::Critical] << "Can't create SSL Socket";
-        throw exception;
-    }
-
     _SocketPtr = new struct sockaddr_in;
     memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
 
-    _SocketPtrSize=0;
+    _SocketPtrSize=sizeof(struct sockaddr_in);
 
     struct addrinfo hints,*result,*rp;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
 
     int tsock;
 
