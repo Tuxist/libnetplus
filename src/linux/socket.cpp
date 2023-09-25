@@ -266,6 +266,8 @@ netplus::tcp* netplus::tcp::connect(){
     tcp *clntsock=new tcp();
     clntsock->_SocketPtr=new struct sockaddr;
     clntsock->_SocketPtrSize=sizeof(struct sockaddr);
+    ((struct sockaddr*)clntsock->_SocketPtr)->sa_family=((struct sockaddr*)_SocketPtr)->sa_family;
+
     if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr, clntsock->_SocketPtrSize)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
@@ -485,11 +487,16 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
 netplus::udp* netplus::udp::connect(){
     NetException exception;
     int sock=0;
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
+    udp *clntsock=new udp();
+    clntsock->_SocketPtr=new struct sockaddr;
+    clntsock->_SocketPtrSize=sizeof(struct sockaddr);
+    ((struct sockaddr*)clntsock->_SocketPtr)->sa_family=((struct sockaddr*)_SocketPtr)->sa_family;
+
+    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr, clntsock->_SocketPtrSize)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    udp *clntsock=new udp();
+
     clntsock->_Socket=sock;
     return clntsock;
 }
@@ -663,11 +670,16 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
 netplus::ssl* netplus::ssl::connect(){
     NetException exception;
     int sock=0;
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
+    ssl *clntsock=new ssl();
+    clntsock->_SocketPtr=new struct sockaddr;
+    clntsock->_SocketPtrSize=sizeof(struct sockaddr);
+    ((struct sockaddr*)clntsock->_SocketPtr)->sa_family=((struct sockaddr*)_SocketPtr)->sa_family;
+
+    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr, clntsock->_SocketPtrSize)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    ssl *clntsock=new ssl();
+
     clntsock->_Socket=sock;
     return clntsock;
 }
