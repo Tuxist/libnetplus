@@ -107,10 +107,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
     
-    _SocketPtr = new struct sockaddr_in;
-    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
 
-    _SocketPtrSize=sizeof(struct sockaddr_in);
 
     struct addrinfo hints,*result,*rp;
 
@@ -128,17 +125,18 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     char serv[512];
     snprintf(serv,512,"%d",port);
 
-    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) < 0) {
+    if ((tsock=::getaddrinfo(addr, serv,&hints,&result)) < 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
 
-    for (rp = result; rp != NULL; rp = rp->ai_next) {
+    for (rp = result; rp != nullptr; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
                            rp->ai_protocol);
         if (_Socket == -1)
             continue;
-
+        _SocketPtr = operator new(rp->ai_addrlen);
+        memset(_SocketPtr, 0, rp->ai_addrlen);
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
 
@@ -158,9 +156,8 @@ netplus::tcp::~tcp(){
         unlink(_UxPath.c_str());
         delete (struct sockaddr_un*)_SocketPtr;
     }else{
-        delete (struct sockaddr_in*)_SocketPtr;
+        delete (struct sockaddr*)_SocketPtr;
     }
-
 }
 
 netplus::tcp::tcp() : socket(){
@@ -184,8 +181,8 @@ int netplus::tcp::getMaxconnections(){
 netplus::socket *netplus::tcp::accept(){
     NetException exception;
     socket *csock=new tcp();
-    struct sockaddr_storage myaddr;
-    socklen_t myaddrlen;
+    struct sockaddr myaddr;
+    socklen_t myaddrlen=sizeof(myaddr);
     csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
         delete csock;
@@ -201,7 +198,7 @@ netplus::socket *netplus::tcp::accept(){
 
 void netplus::tcp::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr)) < 0){
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), _SocketPtrSize) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
@@ -282,8 +279,11 @@ netplus::tcp* netplus::tcp::connect(){
 void netplus::tcp::getAddress(std::string &addr){
     if(!_SocketPtr)
         return;
-    char ipaddr[512];
-    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
+    char ipaddr[INET6_ADDRSTRLEN];
+    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    else
+        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
     addr=ipaddr;
 }
 
@@ -337,11 +337,6 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
 
-    _SocketPtr = new struct sockaddr_in;
-    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
-
-    _SocketPtrSize=sizeof(struct sockaddr_in);
-
     struct addrinfo hints,*result,*rp;
 
 
@@ -368,9 +363,10 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
                             rp->ai_protocol);
         if (_Socket == -1)
             continue;
-
-        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
+        _SocketPtr = operator new(rp->ai_addrlen);
+        memset(_SocketPtr, 0, rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
+        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         break;
     }
 
@@ -429,7 +425,7 @@ netplus::socket *netplus::udp::accept(){
 
 void netplus::udp::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr)) < 0){
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), _SocketPtrSize) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
@@ -499,24 +495,24 @@ netplus::udp* netplus::udp::connect(){
 }
 
 void netplus::udp::getAddress(std::string &addr){
-    if(_SocketPtrSize <= 0)
+    if(!_SocketPtr)
         return;
-    char ipaddr[512];
-    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
+    char ipaddr[INET6_ADDRSTRLEN];
+    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    else
+        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
     addr=ipaddr;
 }
 
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : socket() {
-    NetException exception;
+   NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
-    
-    _SocketPtr = new struct sockaddr_in;
-    memset(_SocketPtr, 0, sizeof(struct sockaddr_in));
 
-    _SocketPtrSize=sizeof(struct sockaddr_in);
+
 
     struct addrinfo hints,*result,*rp;
 
@@ -534,25 +530,26 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     char serv[512];
     snprintf(serv,512,"%d",port);
 
-    if ((tsock=getaddrinfo(addr, serv,&hints,&result)) < 0) {
+    if ((tsock=::getaddrinfo(addr, serv,&hints,&result)) < 0) {
         exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
         throw exception;
     }
 
-    for (rp = result; rp != NULL; rp = rp->ai_next) {
+    for (rp = result; rp != nullptr; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
-                            rp->ai_protocol);
+                           rp->ai_protocol);
         if (_Socket == -1)
             continue;
-
+        _SocketPtr = operator new(rp->ai_addrlen);
+        memset(_SocketPtr, 0, rp->ai_addrlen);
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
+
         break;
     }
 
     ::freeaddrinfo(result);
-    
-    
+
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
     
@@ -592,7 +589,7 @@ netplus::socket *netplus::ssl::accept(){
 
 void netplus::ssl::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), sizeof(struct sockaddr)) < 0){
+    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), _SocketPtrSize) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
@@ -676,10 +673,13 @@ netplus::ssl* netplus::ssl::connect(){
 }
 
 void netplus::ssl::getAddress(std::string &addr){
-    if(_SocketPtrSize <= 0)
+    if(!_SocketPtr)
         return;
-    char ipaddr[512];
-    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
+    char ipaddr[INET6_ADDRSTRLEN];
+    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    else
+        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
     addr=ipaddr;
 }
 
