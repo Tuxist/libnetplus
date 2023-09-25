@@ -184,6 +184,8 @@ int netplus::tcp::getMaxconnections(){
 netplus::socket *netplus::tcp::accept(){
     NetException exception;
     socket *csock=new tcp();
+    csock->_SocketPtr = new struct sockaddr;
+    csock->_SocketPtrSize = sizeof(struct sockaddr);
     csock->_Socket = ::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,&csock->_SocketPtrSize);
     if(csock->_Socket<0){
         delete csock;
@@ -405,6 +407,8 @@ int netplus::udp::getMaxconnections(){
 netplus::socket *netplus::udp::accept(){
     NetException exception;
     socket *csock=new udp();
+    csock->_SocketPtr = new struct sockaddr;
+    csock->_SocketPtrSize = sizeof(struct sockaddr);
     csock->_Socket = ::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,&csock->_SocketPtrSize);
     if(csock->_Socket<0){
         delete csock;
