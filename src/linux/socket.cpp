@@ -273,7 +273,7 @@ netplus::tcp* netplus::tcp::connect(){
 
 
 void netplus::tcp::getAddress(std::string &addr){
-    if(_SocketPtrSize < 0)
+    if(_SocketPtrSize <= 0)
         return;
     char ipaddr[512];
     inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
@@ -487,7 +487,7 @@ netplus::udp* netplus::udp::connect(){
 }
 
 void netplus::udp::getAddress(std::string &addr){
-    if(_SocketPtrSize < 0)
+    if(_SocketPtrSize <= 0)
         return;
     char ipaddr[512];
     inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
@@ -659,7 +659,7 @@ netplus::ssl* netplus::ssl::connect(){
 }
 
 void netplus::ssl::getAddress(std::string &addr){
-    if(_SocketPtrSize < 0)
+    if(_SocketPtrSize <= 0)
         return;
     char ipaddr[512];
     inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
