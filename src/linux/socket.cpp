@@ -44,8 +44,6 @@ netplus::socket::socket(){
 }
 
 netplus::socket::~socket(){
-    if(_Socket>=0)
-        close(_Socket);
 }
 
 
@@ -162,8 +160,7 @@ netplus::tcp::~tcp(){
 
 netplus::tcp::tcp() : socket(){
     _SocketPtr=nullptr;
-    _SocketPtr = new struct sockaddr_in;
-    _SocketPtrSize = sizeof(struct sockaddr_in);
+    _SocketPtrSize=0;
 }
 
 
@@ -377,6 +374,7 @@ netplus::udp::~udp(){
 
 netplus::udp::udp() : socket(){
     _SocketPtr=nullptr;
+    _SocketPtrSize=0;
 }
 
 
@@ -543,6 +541,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
 netplus::ssl::ssl(){
     _SocketPtr=nullptr;
+    _SocketPtrSize=0;
 }
 
 netplus::ssl::~ssl(){
