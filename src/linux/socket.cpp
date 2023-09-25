@@ -62,12 +62,17 @@ int netplus::socket::getSocket(){
 
 netplus::tcp::tcp(const netplus::tcp& ctcp){
     _Socket=ctcp._Socket;
-    if(_UxPath.empty())
-        _SocketPtr=new struct sockaddr_in;
-    else
-        _SocketPtr=new struct sockaddr_un;
+    _SocketPtr=nullptr;
+    if(_UxPath.empty()){
+        if(ctcp._SocketPtr)
+            _SocketPtr=new struct sockaddr_in;
 
-    memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
+    }else{
+        if(ctcp._SocketPtr)
+            _SocketPtr=new struct sockaddr_un;
+    }
+    if(_SocketPtr)
+        memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
 
     _SocketPtrSize=ctcp._SocketPtrSize;
 }
@@ -268,24 +273,26 @@ netplus::tcp* netplus::tcp::connect(){
 
 
 void netplus::tcp::getAddress(std::string &addr){
+    if(_SocketPtrSize < 0)
+        return;
     char ipaddr[512];
-    struct sockaddr sockaddr;
-    socklen_t iplen = sizeof(struct sockaddr);
-    memset(&sockaddr,0,iplen);
-    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
-    inet_ntop(AF_UNSPEC, &sockaddr, ipaddr, sizeof(ipaddr));
+    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
     addr=ipaddr;
 }
 
 netplus::udp::udp(const netplus::udp& cudp){
     _Socket=cudp._Socket;
+    _SocketPtr=nullptr;
     if(_UxPath.empty()){
-        _SocketPtr=new struct sockaddr_in;
-        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(struct sockaddr_in));
+        if(cudp._SocketPtr)
+            _SocketPtr=new struct sockaddr_in;
+
     }else{
-        _SocketPtr=new struct sockaddr_un;
-        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(struct sockaddr_un));
+        if(cudp._SocketPtr)
+            _SocketPtr=new struct sockaddr_un;
     }
+    if(_SocketPtr)
+        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
 
     _SocketPtrSize=cudp._SocketPtrSize;
 }
@@ -480,12 +487,10 @@ netplus::udp* netplus::udp::connect(){
 }
 
 void netplus::udp::getAddress(std::string &addr){
+    if(_SocketPtrSize < 0)
+        return;
     char ipaddr[512];
-    struct sockaddr_in sockaddr;
-    socklen_t iplen = sizeof(sockaddr);
-    bzero(&sockaddr, sizeof(sockaddr));
-    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
-    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
     addr=ipaddr;
 }
 
@@ -654,12 +659,10 @@ netplus::ssl* netplus::ssl::connect(){
 }
 
 void netplus::ssl::getAddress(std::string &addr){
+    if(_SocketPtrSize < 0)
+        return;
     char ipaddr[512];
-    struct sockaddr_in sockaddr;
-    socklen_t iplen = sizeof(sockaddr);
-    bzero(&sockaddr, sizeof(sockaddr));
-    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
-    inet_ntop(AF_INET, &sockaddr.sin_addr, ipaddr, sizeof(ipaddr));
+    inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
     addr=ipaddr;
 }
 
