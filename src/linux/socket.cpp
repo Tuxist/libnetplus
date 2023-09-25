@@ -263,12 +263,15 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;
-
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
+    tcp *clntsock=new tcp();
+    clntsock->_SocketPtrSize=_SocketPtrSize;
+    clntsock->_SocketPtr = operator new(_SocketPtrSize);
+    memcpy(clntsock->_SocketPtr,_SocketPtr,_SocketPtrSize);
+    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr,clntsock->_SocketPtrSize)) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    tcp *clntsock=new tcp();
     clntsock->_Socket=sock;
     return clntsock;
 }
@@ -482,15 +485,16 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
 
 netplus::udp* netplus::udp::connect(){
     NetException exception;
-    int sock=0;
 
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, _SocketPtrSize)) < 0) {
+    udp *clntsock=new udp();
+    clntsock->_SocketPtrSize=_SocketPtrSize;
+    clntsock->_SocketPtr = operator new(_SocketPtrSize);
+    memcpy(clntsock->_SocketPtr,_SocketPtr,_SocketPtrSize);
+    if ((clntsock->_Socket=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr,clntsock->_SocketPtrSize)) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-
-    udp *clntsock=new udp();
-    clntsock->_Socket=sock;
     return clntsock;
 }
 
@@ -663,13 +667,15 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
 netplus::ssl* netplus::ssl::connect(){
     NetException exception;
     int sock=0;
-
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
+    ssl *clntsock=new ssl();
+    clntsock->_SocketPtrSize=_SocketPtrSize;
+    clntsock->_SocketPtr = operator new(_SocketPtrSize);
+    memcpy(clntsock->_SocketPtr,_SocketPtr,_SocketPtrSize);
+    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr,clntsock->_SocketPtrSize)) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-
-    ssl *clntsock=new ssl();
     clntsock->_Socket=sock;
     return clntsock;
 }
