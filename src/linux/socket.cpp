@@ -184,13 +184,18 @@ int netplus::tcp::getMaxconnections(){
 netplus::socket *netplus::tcp::accept(){
     NetException exception;
     socket *csock=new tcp();
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)_SocketPtr,&_SocketPtrSize);
+    struct sockaddr_storage myaddr;
+    socklen_t myaddrlen;
+    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
         delete csock;
         csock=nullptr;
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
+    csock->_SocketPtrSize = myaddrlen;
+    csock->_SocketPtr = operator new(myaddrlen);
+    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
     return csock;
 }
 
@@ -260,20 +265,22 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
-    int sock=0;;
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, _SocketPtrSize)) < 0) {
+    int sock=0;
+    tcp *clntsock=new tcp();
+    clntsock->_SocketPtr=new struct sockaddr;
+    clntsock->_SocketPtrSize=sizeof(struct sockaddr);
+    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr, clntsock->_SocketPtrSize)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
 
-    tcp *clntsock=new tcp();
     clntsock->_Socket=sock;
     return clntsock;
 }
 
 
 void netplus::tcp::getAddress(std::string &addr){
-    if(_SocketPtrSize <= 0)
+    if(!_SocketPtr)
         return;
     char ipaddr[512];
     inet_ntop(AF_UNSPEC, (struct sockaddr*)_SocketPtr, ipaddr, _SocketPtrSize);
@@ -405,13 +412,18 @@ int netplus::udp::getMaxconnections(){
 netplus::socket *netplus::udp::accept(){
     NetException exception;
     socket *csock=new udp();
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)_SocketPtr,&_SocketPtrSize);
+    struct sockaddr_storage myaddr;
+    socklen_t myaddrlen;
+    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
         delete csock;
         csock=nullptr;
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
+    csock->_SocketPtrSize = myaddrlen;
+    csock->_SocketPtr = operator new(myaddrlen);
+    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
     return csock;
 }
 
@@ -563,13 +575,18 @@ netplus::ssl::~ssl(){
 netplus::socket *netplus::ssl::accept(){
     NetException exception;
     socket *csock=new ssl();
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,
-                          &csock->_SocketPtrSize);
+    struct sockaddr_storage myaddr;
+    socklen_t myaddrlen;
+    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
         delete csock;
+        csock=nullptr;
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
+    csock->_SocketPtrSize = myaddrlen;
+    csock->_SocketPtr = operator new(myaddrlen);
+    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
     return csock;
 }
 
