@@ -257,7 +257,6 @@ netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;;
     if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, _SocketPtrSize)) < 0) {
-        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
