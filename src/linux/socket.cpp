@@ -255,11 +255,13 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
-    int sock=0;
-    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, sizeof(struct sockaddr))) < 0) {
+    int sock=0;;
+    if ((sock=::connect(_Socket, (struct sockaddr*)_SocketPtr, _SocketPtrSize)) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+
     tcp *clntsock=new tcp();
     clntsock->_Socket=sock;
     return clntsock;
@@ -268,7 +270,11 @@ netplus::tcp* netplus::tcp::connect(){
 
 void netplus::tcp::getAddress(std::string &addr){
     char ipaddr[512];
-    inet_ntop(AF_INET, &((struct sockaddr_in *)_SocketPtr)->sin_addr, ipaddr, _SocketPtrSize);
+    struct sockaddr sockaddr;
+    socklen_t iplen = sizeof(struct sockaddr);
+    memset(&sockaddr,0,iplen);
+    getsockname(_Socket, (struct sockaddr *) &sockaddr, &iplen);
+    inet_ntop(AF_UNSPEC, &sockaddr, ipaddr, sizeof(ipaddr));
     addr=ipaddr;
 }
 
