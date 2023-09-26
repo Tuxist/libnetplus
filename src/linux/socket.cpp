@@ -56,7 +56,7 @@ HIDDEN bool _rmlock_tcp(int socket){
     for (auto it = std::begin(_tcplock); it!=std::end(_tcplock); ++it){
         if(*it==socket){
             if(rm==-1)
-               _tcplock.erase(it);
+               it=_tcplock.erase(it);
             ++rm;
         }
     }
@@ -80,7 +80,7 @@ HIDDEN bool _rmlock_udp(int socket){
     for (auto it = std::begin(_udplock); it!=std::end(_udplock); ++it){
         if(*it==socket){
             if(rm==-1)
-                _udplock.erase(it);
+                it=_udplock.erase(it);
             ++rm;
         }
     }
