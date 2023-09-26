@@ -335,17 +335,7 @@ void netplus::tcp::getAddress(std::string &addr){
 
 netplus::udp::udp(const netplus::udp& cudp){
     _Socket=cudp._Socket;
-    _SocketPtr=nullptr;
-    if(_UxPath.empty()){
-        if(cudp._SocketPtr)
-            _SocketPtr=new struct sockaddr_in;
-
-    }else{
-        if(cudp._SocketPtr)
-            _SocketPtr=new struct sockaddr_un;
-    }
-    if(_SocketPtr)
-        memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
+    _SocketPtr=cudp._SocketPtr;
     _SocketPtrSize=cudp._SocketPtrSize;
     addlock_udp(_Socket);
 }
@@ -430,8 +420,8 @@ netplus::udp::~udp(){
         if(!_UxPath.empty()){
             unlink(_UxPath.c_str());
         }
+        operator delete(_SocketPtr,_SocketPtrSize);
     }
-    operator delete(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::udp::udp(int sock) : socket(){
