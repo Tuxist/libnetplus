@@ -210,6 +210,7 @@ unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long size,int flags){
+TCPSEND:
     NetException exception;
     if(!socket){                                                                                     
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -223,9 +224,10 @@ unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long si
                         socket->_SocketPtrSize
                      );
     if(rval<0){
-        if(errno==EAGAIN)
-            return 0;
-
+        if(errno==EAGAIN){
+            sleep(1);
+            goto TCPSEND;
+        }
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -238,6 +240,7 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long size,int flags){
+TCPRECV:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -252,7 +255,7 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
                          );
     if(recvsize<0){
         if(errno==EAGAIN)
-            return 0;
+            goto TCPRECV;
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
@@ -438,6 +441,7 @@ unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long size,int flags){
+UDPSEND:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -449,8 +453,10 @@ unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long si
                         flags
                      );
     if(rval<0){
-        if(errno==EAGAIN)
-            return 0;
+        if(errno==EAGAIN){
+            sleep(1);
+            goto UDPSEND;
+        }
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -463,6 +469,7 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long size,int flags){
+UDPRECV:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -474,8 +481,10 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
                             flags
                          );
     if(recvsize<0){
-        if(errno==EAGAIN)
-            return 0;
+        if(errno==EAGAIN){
+            sleep(1);
+            goto UDPRECV;
+        }
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
@@ -616,6 +625,7 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
 }
 
 unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size,int flags){
+SSLSEND:
     NetException exception;
     if(!socket){                                                                                     
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -629,8 +639,10 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
                         socket->_SocketPtrSize
                      );
     if(rval<0){
-        if(errno==EAGAIN)
-            return 0;
+        if(errno==EAGAIN){
+            sleep(1);
+            goto SSLSEND;
+        }
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
@@ -642,6 +654,7 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
 }
 
 unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size,int flags){
+SSLRECV:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -655,8 +668,10 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
                             &socket->_SocketPtrSize
                          );
     if(recvsize<0){
-        if(errno==EAGAIN)
-            return 0;
+        if(errno==EAGAIN){
+            sleep(1);
+            goto SSLRECV;
+        }
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;
         throw exception;
