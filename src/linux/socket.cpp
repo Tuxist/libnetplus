@@ -45,9 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 HIDDEN std::mutex        _tcpmutex;
 HIDDEN std::vector<int>  _tcplock;
 
-HIDDEN std::mutex        _udpmutex;
-HIDDEN std::vector<int>  _udplock;
-
 HIDDEN void addlock_tcp(int socket){
     const std::lock_guard<std::mutex> lock(_tcpmutex);
     _tcplock.push_back(socket);
@@ -67,6 +64,10 @@ HIDDEN bool _rmlock_tcp(int socket){
         return true;
     return false;
 }
+
+
+HIDDEN std::mutex        _udpmutex;
+HIDDEN std::vector<int>  _udplock;
 
 HIDDEN void addlock_udp(int socket){
     const std::lock_guard<std::mutex> lock(_udpmutex);
@@ -111,20 +112,9 @@ int netplus::socket::getSocket(){
 
 netplus::tcp::tcp(const netplus::tcp& ctcp){
     _Socket=ctcp._Socket;
-    _SocketPtr=nullptr;
-    if(_UxPath.empty()){
-        if(ctcp._SocketPtr)
-            _SocketPtr=new struct sockaddr_in;
-
-    }else{
-        if(ctcp._SocketPtr)
-            _SocketPtr=new struct sockaddr_un;
-    }
-    if(_SocketPtr)
-        memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
-
+    _SocketPtr=ctcp._SocketPtr;
     _SocketPtrSize=ctcp._SocketPtrSize;
-
+    addlock_tcp(_Socket);
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -208,8 +198,8 @@ netplus::tcp::~tcp(){
         if(!_UxPath.empty()){
             unlink(_UxPath.c_str());
         }
+        operator delete(_SocketPtr,_SocketPtrSize);
     }
-    operator delete(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::tcp::tcp(int sock) : socket(){
