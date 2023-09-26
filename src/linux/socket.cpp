@@ -25,6 +25,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#include <map>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -38,6 +39,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
+#define HIDDEN __attribute__ ((visibility ("hidden")))
+
+HIDDEN std::map<int,int> tcplock;
+HIDDEN std::map<int,int> udplock;
 
 netplus::socket::socket(){
     _Socket=-1;
@@ -45,7 +50,6 @@ netplus::socket::socket(){
 
 netplus::socket::~socket(){
 }
-
 
 void netplus::socket::setnonblocking(){
     int sockopts=fcntl(_Socket, F_GETFL, 0);
@@ -75,7 +79,7 @@ netplus::tcp::tcp(const netplus::tcp& ctcp){
         memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
 
     _SocketPtrSize=ctcp._SocketPtrSize;
-    _close=false;
+    tcplock.insert(std::pair<int,int>(_Socket,true));
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -100,7 +104,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    _close=true;
+    tcplock.insert(std::pair<int,int>(_Socket,false));
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -149,22 +153,23 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    _close=true;
+    tcplock.insert(std::pair<int,int>(_Socket,false));
 }
                                         
 netplus::tcp::~tcp(){
-    if(_Socket>=0 && _close)
+    if(_Socket>=0 && !tcplock.find(_Socket)->second)
         ::close(_Socket);
-    if(!_UxPath.empty() && _close){
+    if(!_UxPath.empty() && !tcplock.find(_Socket)->second){
         unlink(_UxPath.c_str());
     }
     operator delete(_SocketPtr,_SocketPtrSize);
+    tcplock.erase(tcplock.find(_Socket));
 }
 
 netplus::tcp::tcp() : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
-    _close=true;
+    tcplock.insert(std::pair<int,int>(_Socket,false));
 }
 
 
@@ -307,7 +312,7 @@ netplus::udp::udp(const netplus::udp& cudp){
     if(_SocketPtr)
         memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
     _SocketPtrSize=cudp._SocketPtrSize;
-    _close=false;
+    udplock.insert(std::pair<int,int>(_Socket,true));
 }
 
 
@@ -334,7 +339,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
 
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    _close = true;
+    udplock.insert(std::pair<int,int>(_Socket,false));
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -380,22 +385,23 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    _close = true;
+    udplock.insert(std::pair<int,int>(_Socket,false));
 }
 
 netplus::udp::~udp(){
-    if(_Socket>=0 && _close)
+    if(_Socket>=0 && !udplock.find(_Socket)->second)
         ::close(_Socket);
-    if(!_UxPath.empty() && _close){
+    if(!_UxPath.empty() && !udplock.find(_Socket)->second){
         unlink(_UxPath.c_str());
     }
     operator delete(_SocketPtr,_SocketPtrSize);
+    udplock.erase(udplock.find(_Socket));
 }
 
 netplus::udp::udp() : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
-    _close = true;
+    udplock.insert(std::pair<int,int>(_Socket,false));
 }
 
 

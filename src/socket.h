@@ -86,7 +86,6 @@ namespace netplus {
             void getAddress(std::string &addr);
 
         private:
-            bool            _close;
             tcp();
             int             _Maxconnections;
             std::string     _UxPath;
@@ -117,7 +116,6 @@ namespace netplus {
             void getAddress(std::string &addr);
 
         private:
-            bool            _close;
             udp();
             int             _Maxconnections;
             std::string     _UxPath;
