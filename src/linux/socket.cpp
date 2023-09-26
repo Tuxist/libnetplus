@@ -154,10 +154,8 @@ netplus::tcp::~tcp(){
         ::close(_Socket);
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
-        delete (struct sockaddr_un*)_SocketPtr;
-    }else{
-        delete (struct sockaddr*)_SocketPtr;
     }
+    operator delete(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::tcp::tcp() : socket(){
@@ -385,10 +383,8 @@ netplus::udp::~udp(){
         ::close(_Socket);
     if(!_UxPath.empty()){
         unlink(_UxPath.c_str());
-        delete (struct sockaddr_un*)_SocketPtr;
-    }else{
-        delete (struct sockaddr_in*)_SocketPtr;
     }
+    operator delete(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::udp::udp() : socket(){
@@ -578,8 +574,8 @@ netplus::ssl::ssl(){
 
 netplus::ssl::~ssl(){
     delete _Cert;
-    delete (struct sockaddr_in*)_SocketPtr;
     close(_Socket);
+    operator delete(_SocketPtr,_SocketPtrSize);
 }
 
 netplus::socket *netplus::ssl::accept(){
