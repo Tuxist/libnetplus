@@ -25,7 +25,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include <map>
+#include <vector>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -35,14 +35,59 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <mutex>
 
 #include "exception.h"
 #include "socket.h"
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
-HIDDEN std::map<int,int> tcplock;
-HIDDEN std::map<int,int> udplock;
+HIDDEN std::mutex        _tcpmutex;
+HIDDEN std::vector<int>  _tcplock;
+
+HIDDEN std::mutex        _udpmutex;
+HIDDEN std::vector<int>  _udplock;
+
+HIDDEN void addlock_tcp(int socket){
+    const std::lock_guard<std::mutex> lock(_tcpmutex);
+    _tcplock.push_back(socket);
+}
+
+HIDDEN bool _rmlock_tcp(int socket){
+    const std::lock_guard<std::mutex> lock(_tcpmutex);
+    int rm=-1;
+    for (auto it = std::begin(_tcplock); it!=std::end(_tcplock); ++it){
+        if(*it==socket){
+            if(rm==-1)
+               _tcplock.erase(it);
+            ++rm;
+        }
+    }
+    if(rm == 0)
+        return true;
+    return false;
+}
+
+HIDDEN void addlock_udp(int socket){
+    const std::lock_guard<std::mutex> lock(_udpmutex);
+    _udplock.push_back(socket);
+}
+
+HIDDEN bool _rmlock_udp(int socket){
+    const std::lock_guard<std::mutex> lock(_udpmutex);
+    int rm=-1;
+    for (auto it = std::begin(_udplock); it!=std::end(_udplock); ++it){
+        if(*it==socket){
+            if(rm==-1)
+                _udplock.erase(it);
+            ++rm;
+        }
+    }
+    if(rm == 0)
+        return true;
+    return false;
+}
+
 
 netplus::socket::socket(){
     _Socket=-1;
@@ -79,7 +124,7 @@ netplus::tcp::tcp(const netplus::tcp& ctcp){
         memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
 
     _SocketPtrSize=ctcp._SocketPtrSize;
-    tcplock.insert(std::pair<int,int>(_Socket,true));
+
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -104,7 +149,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    tcplock.insert(std::pair<int,int>(_Socket,false));
+    addlock_tcp(_Socket);
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -153,23 +198,25 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    tcplock.insert(std::pair<int,int>(_Socket,false));
+    addlock_tcp(_Socket);
 }
                                         
 netplus::tcp::~tcp(){
-    if(_Socket>=0 && !tcplock.find(_Socket)->second)
-        ::close(_Socket);
-    if(!_UxPath.empty() && !tcplock.find(_Socket)->second){
-        unlink(_UxPath.c_str());
+    if(_rmlock_tcp(_Socket)){
+        if(_Socket>=0)
+            ::close(_Socket);
+        if(!_UxPath.empty()){
+            unlink(_UxPath.c_str());
+        }
     }
     operator delete(_SocketPtr,_SocketPtrSize);
-    tcplock.erase(tcplock.find(_Socket));
 }
 
-netplus::tcp::tcp() : socket(){
+netplus::tcp::tcp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
-    tcplock.insert(std::pair<int,int>(_Socket,false));
+    _Socket=sock;
+    addlock_tcp(_Socket);
 }
 
 
@@ -187,16 +234,14 @@ int netplus::tcp::getMaxconnections(){
 
 netplus::socket *netplus::tcp::accept(){
     NetException exception;
-    socket *csock=new tcp();
     struct sockaddr myaddr;
     socklen_t myaddrlen=sizeof(myaddr);
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
-    if(csock->_Socket<0){
-        delete csock;
-        csock=nullptr;
+    int sock = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
+    if(sock<0){
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
+    socket *csock=new tcp(sock);
     csock->_SocketPtrSize = myaddrlen;
     csock->_SocketPtr = operator new(myaddrlen);
     memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
@@ -273,15 +318,15 @@ TCPRECV:
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;
-    tcp *clntsock=new tcp();
-    clntsock->_SocketPtrSize=_SocketPtrSize;
-    clntsock->_SocketPtr = operator new(_SocketPtrSize);
-    memcpy(clntsock->_SocketPtr,_SocketPtr,_SocketPtrSize);
-    if ((sock=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr,clntsock->_SocketPtrSize)) < 0) {
-        delete clntsock;
+    struct sockaddr saddr;
+    if ( (sock=::connect(_Socket,&saddr,sizeof(saddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+    tcp *clntsock=new tcp(sock);
+    clntsock->_SocketPtrSize=sizeof(saddr);
+    clntsock->_SocketPtr = operator new(clntsock->_SocketPtrSize);
+    memcpy(clntsock->_SocketPtr,&saddr,clntsock->_SocketPtrSize);
     clntsock->_Socket=sock;
     return clntsock;
 }
@@ -312,7 +357,7 @@ netplus::udp::udp(const netplus::udp& cudp){
     if(_SocketPtr)
         memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
     _SocketPtrSize=cudp._SocketPtrSize;
-    udplock.insert(std::pair<int,int>(_Socket,true));
+    addlock_udp(_Socket);
 }
 
 
@@ -339,7 +384,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
 
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    udplock.insert(std::pair<int,int>(_Socket,false));
+    addlock_udp(_Socket);
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -385,23 +430,25 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    udplock.insert(std::pair<int,int>(_Socket,false));
+    addlock_udp(_Socket);
 }
 
 netplus::udp::~udp(){
-    if(_Socket>=0 && !udplock.find(_Socket)->second)
-        ::close(_Socket);
-    if(!_UxPath.empty() && !udplock.find(_Socket)->second){
-        unlink(_UxPath.c_str());
+    if(_rmlock_udp(_Socket)){
+        if(_Socket>=0)
+            ::close(_Socket);
+        if(!_UxPath.empty()){
+            unlink(_UxPath.c_str());
+        }
     }
     operator delete(_SocketPtr,_SocketPtrSize);
-    udplock.erase(udplock.find(_Socket));
 }
 
-netplus::udp::udp() : socket(){
+netplus::udp::udp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
-    udplock.insert(std::pair<int,int>(_Socket,false));
+    _Socket=sock;
+    addlock_udp(_Socket);
 }
 
 
@@ -419,16 +466,14 @@ int netplus::udp::getMaxconnections(){
 
 netplus::socket *netplus::udp::accept(){
     NetException exception;
-    socket *csock=new udp();
     struct sockaddr_storage myaddr;
     socklen_t myaddrlen;
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
-    if(csock->_Socket<0){
-        delete csock;
-        csock=nullptr;
+    int sock = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
+    if(sock<0){
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
+    socket *csock=new udp(sock);
     csock->_SocketPtrSize = myaddrlen;
     csock->_SocketPtr = operator new(myaddrlen);
     memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
@@ -502,16 +547,17 @@ UDPRECV:
 
 netplus::udp* netplus::udp::connect(){
     NetException exception;
-
-    udp *clntsock=new udp();
-    clntsock->_SocketPtrSize=_SocketPtrSize;
-    clntsock->_SocketPtr = operator new(_SocketPtrSize);
-    memcpy(clntsock->_SocketPtr,_SocketPtr,_SocketPtrSize);
-    if ((clntsock->_Socket=::connect(_Socket, (struct sockaddr*)clntsock->_SocketPtr,clntsock->_SocketPtrSize)) < 0) {
-        delete clntsock;
+    int sock=0;
+    struct sockaddr saddr;
+    if ( (sock=::connect(_Socket,&saddr,sizeof(saddr))) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
+    udp *clntsock=new udp(sock);
+    clntsock->_SocketPtrSize=sizeof(saddr);
+    clntsock->_SocketPtr = operator new(clntsock->_SocketPtrSize);
+    memcpy(clntsock->_SocketPtr,&saddr,clntsock->_SocketPtrSize);
+    clntsock->_Socket=sock;
     return clntsock;
 }
 
