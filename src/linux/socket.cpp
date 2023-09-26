@@ -75,6 +75,7 @@ netplus::tcp::tcp(const netplus::tcp& ctcp){
         memcpy(_SocketPtr,ctcp._SocketPtr,sizeof(ctcp._SocketPtr));
 
     _SocketPtrSize=ctcp._SocketPtrSize;
+    _close=false;
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -99,6 +100,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
+    _close=true;
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -147,12 +149,13 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
+    _close=true;
 }
                                         
 netplus::tcp::~tcp(){
-    if(_Socket>=0)
+    if(_Socket>=0 && _close)
         ::close(_Socket);
-    if(!_UxPath.empty()){
+    if(!_UxPath.empty() && _close){
         unlink(_UxPath.c_str());
     }
     operator delete(_SocketPtr,_SocketPtrSize);
@@ -161,6 +164,7 @@ netplus::tcp::~tcp(){
 netplus::tcp::tcp() : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
+    _close=true;
 }
 
 
