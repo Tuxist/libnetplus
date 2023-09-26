@@ -532,15 +532,11 @@ UDPRECV:
 netplus::udp* netplus::udp::connect(){
     NetException exception;
     int sock=0;
-    struct sockaddr saddr;
-    if ( (sock=::connect(_Socket,&saddr,sizeof(saddr))) < 0) {
+    if ( (sock=::connect(_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
     udp *clntsock=new udp(sock);
-    clntsock->_SocketPtrSize=sizeof(saddr);
-    clntsock->_SocketPtr = operator new(clntsock->_SocketPtrSize);
-    memcpy(clntsock->_SocketPtr,&saddr,clntsock->_SocketPtrSize);
     clntsock->_Socket=sock;
     return clntsock;
 }
