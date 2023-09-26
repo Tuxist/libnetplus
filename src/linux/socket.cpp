@@ -302,8 +302,8 @@ netplus::udp::udp(const netplus::udp& cudp){
     }
     if(_SocketPtr)
         memcpy(_SocketPtr,cudp._SocketPtr,sizeof(cudp._SocketPtr));
-
     _SocketPtrSize=cudp._SocketPtrSize;
+    _close=false;
 }
 
 
@@ -330,7 +330,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
 
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-
+    _close = true;
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -376,12 +376,13 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
+    _close = true;
 }
 
 netplus::udp::~udp(){
-    if(_Socket>=0)
+    if(_Socket>=0 && _close)
         ::close(_Socket);
-    if(!_UxPath.empty()){
+    if(!_UxPath.empty() && _close){
         unlink(_UxPath.c_str());
     }
     operator delete(_SocketPtr,_SocketPtrSize);
@@ -390,6 +391,7 @@ netplus::udp::~udp(){
 netplus::udp::udp() : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
+    _close = true;
 }
 
 
