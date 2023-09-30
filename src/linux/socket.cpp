@@ -202,7 +202,7 @@ netplus::tcp::~tcp(){
         if(!_UxPath.empty()){
             unlink(_UxPath.c_str());
         }
-        operator delete(_SocketPtr,_SocketPtrSize);
+        operator delete(_SocketPtr,&_SocketPtr);
     }
 }
 
@@ -419,7 +419,7 @@ netplus::udp::~udp(){
         if(!_UxPath.empty()){
             unlink(_UxPath.c_str());
         }
-        operator delete(_SocketPtr,_SocketPtrSize);
+        operator delete(_SocketPtr,&_SocketPtrSize);
     }
 }
 
@@ -607,7 +607,7 @@ netplus::ssl::ssl(){
 netplus::ssl::~ssl(){
     delete _Cert;
     close(_Socket);
-    operator delete(_SocketPtr,_SocketPtrSize);
+    operator delete(_SocketPtr,&_SocketPtrSize);
 }
 
 netplus::socket *netplus::ssl::accept(){
