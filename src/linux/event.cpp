@@ -207,14 +207,14 @@ namespace netplus {
             wcon->resizeSendQueue(sended);
         }else{
            NetException exp;
-	   switch(errno){
+           switch(errno){
                 case EAGAIN:
                     exp[NetException::Note] << "WriteEvent: Resource temporarily unavailable";
                     throw exp;
                 default:
                     exp[NetException::Error] << "WriteEvent: no data sended";
                     throw exp;
-	    }
+            }
         }
     };
 
@@ -307,17 +307,17 @@ namespace netplus {
                                 throw excep;
                         }
                     }catch(NetException& e){
-                        eventptr->CloseEventHandler(i);
-                        throw e;
+                        if(e.getErrorType()!=NetException::Note){
+                            eventptr->CloseEventHandler(i);
+                            throw e;
+                        }
                     }
                 } catch (NetException& e) {
                     if (e.getErrorType() == NetException::Critical) {
                         throw e;
-                    }
-                    if(e.getErrorType() != NetException::Note){
+                    }else if(e.getErrorType() != NetException::Note){
                         std::cerr << e.what() << std::endl;
                     }
-
                 }
                 ((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].store(-1);
             }
