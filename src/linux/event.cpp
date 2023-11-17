@@ -221,8 +221,10 @@ namespace netplus {
 
     void poll::CloseEventHandler(int pos) {
         bool expected=false;
-        if(_Events[pos].data.ptr)
+        if(_Events[pos].data.ptr){
+            ((con*)_Events[pos].data.ptr)->sending(false);
             ((con*)_Events[pos].data.ptr)->closecon.compare_exchange_strong(expected,true);
+        }
     };
 
     /*Connection Ready to send Data*/
