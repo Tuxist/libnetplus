@@ -141,7 +141,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
         exception[NetException::Critical] << "Can't create TCP UnixSocket";
         throw exception;
     }
-    
+    _SocketPtrSize=sizeof(sockaddr_un);
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
     addlock_tcp(_Socket);
 }
