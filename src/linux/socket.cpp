@@ -199,9 +199,6 @@ netplus::tcp::~tcp(){
     if(_rmlock_tcp(_Socket)){
         if(_Socket>=0)
             ::close(_Socket);
-        if(!_UxPath.empty()){
-            unlink(_UxPath.c_str());
-        }
         operator delete(_SocketPtr,&_SocketPtr);
     }
 }
