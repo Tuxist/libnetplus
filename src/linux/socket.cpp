@@ -328,7 +328,7 @@ TCPRECV:
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;
-    if ( (sock=::connect(_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
+    if ( ::connect(sock,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
 #ifdef _GNU_SOURCE
         char buf[512];
         char *errstr=strerror_r(errno,buf,512);
@@ -550,7 +550,7 @@ UDPRECV:
 netplus::udp* netplus::udp::connect(){
     NetException exception;
     int sock=0;
-    if ( (sock=::connect(_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
+    if ( ::connect(sock,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
