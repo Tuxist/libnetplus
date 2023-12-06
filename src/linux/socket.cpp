@@ -42,11 +42,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
-#define _XOPEN_SOURCE 700
-#ifdef _GNU_SOURCE
-   #undef _GNU_SOURCE
-#endif
-
 HIDDEN std::mutex        _tcpmutex;
 HIDDEN std::vector<int>  _tcplock;
 
@@ -276,8 +271,14 @@ TCPSEND:
             sleep(1);
             goto TCPSEND;
         }
+
+#ifdef _GNU_SOURCE
+        char buf[512];
+        char *errstr=strerror_r(errno,buf,512);
+#else
         char errstr[512];
         strerror_r(errno,errstr,512);
+#endif
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
@@ -308,8 +309,15 @@ TCPRECV:
         if(errno==EAGAIN)
             goto TCPRECV;
 
+
+#ifdef _GNU_SOURCE
+        char buf[512];
+        char *errstr=strerror_r(errno,buf,512);
+#else
         char errstr[512];
         strerror_r(errno,errstr,512);
+#endif
+
         exception[NetException::Error] << "Socket recvdata failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
