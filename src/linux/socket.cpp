@@ -327,8 +327,10 @@ TCPRECV:
 
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
-    int sock=0;
-    if ( ::connect(sock,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+    tcp *clntsock=new tcp(0);
+    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+    if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+        delete clntsock;
 #ifdef _GNU_SOURCE
         char buf[512];
         char *errstr=strerror_r(errno,buf,512);
@@ -339,7 +341,6 @@ netplus::tcp* netplus::tcp::connect(){
         exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
     }
-    tcp *clntsock=new tcp(sock);
     return clntsock;
 }
 
@@ -549,12 +550,15 @@ UDPRECV:
 
 netplus::udp* netplus::udp::connect(){
     NetException exception;
-    int sock=0;
-    if ( ::connect(sock,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+    udp *clntsock=new udp(0);
+
+    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+
+    if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    udp *clntsock=new udp(sock);
     return clntsock;
 }
 
@@ -732,13 +736,15 @@ SSLRECV:
 
 netplus::ssl* netplus::ssl::connect(){
     NetException exception;
-    int sock=0;
-    if ( (sock=::connect(_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
+     ssl *clntsock=new ssl();
+
+    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+
+    if (::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+        delete clntsock;
         exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
         throw exception;
     }
-    ssl *clntsock=new ssl();
-    clntsock->_Socket=sock;
     return clntsock;
 }
 
