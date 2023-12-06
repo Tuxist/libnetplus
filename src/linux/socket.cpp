@@ -329,7 +329,14 @@ netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     int sock=0;
     if ( (sock=::connect(_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+#ifdef _GNU_SOURCE
+        char buf[512];
+        char *errstr=strerror_r(errno,buf,512);
+#else
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+#endif
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
     }
     tcp *clntsock=new tcp(sock);
