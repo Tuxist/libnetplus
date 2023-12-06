@@ -328,7 +328,9 @@ TCPRECV:
 netplus::tcp* netplus::tcp::connect(){
     NetException exception;
     tcp *clntsock=new tcp(0);
-    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+
+    clntsock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
+
     if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         delete clntsock;
 #ifdef _GNU_SOURCE
@@ -552,7 +554,7 @@ netplus::udp* netplus::udp::connect(){
     NetException exception;
     udp *clntsock=new udp(0);
 
-    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+    clntsock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_DGRAM,0);
 
     if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         delete clntsock;
@@ -738,7 +740,7 @@ netplus::ssl* netplus::ssl::connect(){
     NetException exception;
      ssl *clntsock=new ssl();
 
-    ::socket(clntsock->_Socket,((struct sockaddr*)_SocketPtr)->sa_family,0);
+    clntsock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
 
     if (::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         delete clntsock;
