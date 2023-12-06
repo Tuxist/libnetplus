@@ -42,6 +42,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
+#define _XOPEN_SOURCE 700
+#ifdef _GNU_SOURCE
+   #undef _GNU_SOURCE
+#endif
+
 HIDDEN std::mutex        _tcpmutex;
 HIDDEN std::vector<int>  _tcplock;
 
