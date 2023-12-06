@@ -271,7 +271,10 @@ TCPSEND:
             sleep(1);
             goto TCPSEND;
         }
-        exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+        exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket
+                                       << " ErrorMsg: " <<  errstr;
         throw exception;
     }
     return rval;
@@ -299,8 +302,11 @@ TCPRECV:
     if(recvsize<0){
         if(errno==EAGAIN)
             goto TCPRECV;
-        exception[NetException::Error] << "Socket recvdata failed on Socket: "
-                                          << socket->_Socket;
+
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+        exception[NetException::Error] << "Socket recvdata failed on Socket: " << socket->_Socket
+                                       << " ErrorMsg: " <<  errstr;
         throw exception;
     }
     return recvsize;
