@@ -306,7 +306,6 @@ netplus::udp::udp(const netplus::udp& cudp){
     _SocketPtrSize=cudp._SocketPtrSize;
 }
 
-
 netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
     NetException exception;
     int optval = 1;
@@ -328,7 +327,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
         exception[NetException::Critical] << "Can't create UDP UnixSocket";
         throw exception;
     }
-
+    _SocketPtrSize=sizeof(sockaddr_un);
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
 }
 
@@ -495,12 +494,15 @@ netplus::udp* netplus::udp::connect(){
 
     if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         delete clntsock;
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
     }
     return clntsock;
 }
-
 void netplus::udp::getAddress(std::string &addr){
     if(!_SocketPtr)
         return;
