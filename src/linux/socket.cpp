@@ -36,9 +36,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <netdb.h>
 #include <mutex>
+#include <string.h>
 
 #include "exception.h"
 #include "socket.h"
+
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
@@ -220,13 +225,9 @@ TCPSEND:
             goto TCPSEND;
         }
 
-#ifdef _GNU_SOURCE
-        char buf[512];
-        char *errstr=strerror_r(errno,buf,512);
-#else
         char errstr[512];
         strerror_r(errno,errstr,512);
-#endif
+
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
@@ -258,13 +259,8 @@ TCPRECV:
             goto TCPRECV;
 
 
-#ifdef _GNU_SOURCE
-        char buf[512];
-        char *errstr=strerror_r(errno,buf,512);
-#else
         char errstr[512];
         strerror_r(errno,errstr,512);
-#endif
 
         exception[NetException::Error] << "Socket recvdata failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
@@ -281,13 +277,10 @@ netplus::tcp* netplus::tcp::connect(){
 
     if ( ::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         delete clntsock;
-#ifdef _GNU_SOURCE
-        char buf[512];
-        char *errstr=strerror_r(errno,buf,512);
-#else
+
         char errstr[512];
         strerror_r(errno,errstr,512);
-#endif
+
         exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
     }
