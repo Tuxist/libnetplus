@@ -451,8 +451,11 @@ UDPSEND:
             sleep(1);
             goto UDPSEND;
         }
-        exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
-        throw exception;
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+
+        exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket
+                                       << " ErrorMsg: " <<  errstr;
     }
     return rval;
 }
@@ -479,9 +482,11 @@ UDPRECV:
             sleep(1);
             goto UDPRECV;
         }
-        exception[NetException::Error] << "Socket recvdata failed on Socket: "
-                                          << socket->_Socket;
-        throw exception;
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+
+        exception[NetException::Error] << "Socket recvData failed on Socket: " << socket->_Socket
+                                       << " ErrorMsg: " <<  errstr;
     }
     return recvsize;
 }
