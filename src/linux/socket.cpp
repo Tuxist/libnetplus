@@ -42,60 +42,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
-HIDDEN std::mutex        _tcpmutex;
-HIDDEN std::vector<int>  _tcplock;
-
-HIDDEN void addlock_tcp(int socket){
-    const std::lock_guard<std::mutex> lock(_tcpmutex);
-    _tcplock.push_back(socket);
-}
-
-HIDDEN bool _rmlock_tcp(int socket){
-    const std::lock_guard<std::mutex> lock(_tcpmutex);
-    int rm=-1;
-    for (auto it = std::begin(_tcplock); it!=std::end(_tcplock); ++it){
-        if(*it && *it==socket){
-            if(rm==-1){
-                _tcplock.erase(it);
-                it = std::begin(_tcplock);
-            }
-            ++rm;
-        }
-    }
-    if(rm == 0)
-        return true;
-    return false;
-}
-
-
-HIDDEN std::mutex        _udpmutex;
-HIDDEN std::vector<int>  _udplock;
-
-HIDDEN void addlock_udp(int socket){
-    const std::lock_guard<std::mutex> lock(_udpmutex);
-    _udplock.push_back(socket);
-}
-
-HIDDEN bool _rmlock_udp(int socket){
-    const std::lock_guard<std::mutex> lock(_udpmutex);
-    int rm=-1;
-    for (auto it = std::begin(_udplock); it!=std::end(_udplock); ++it){
-        if(*it && *it==socket){
-            if(rm==-1){
-                _udplock.erase(it);
-                it = std::begin(_udplock);
-            }
-            ++rm;
-        }
-    }
-    if(rm == 0)
-        return true;
-    return false;
-}
-
-
 netplus::socket::socket(){
     _Socket=-1;
+    _Locked=0;
 }
 
 netplus::socket::~socket(){
@@ -115,10 +64,10 @@ int netplus::socket::getSocket(){
 }
 
 netplus::tcp::tcp(const netplus::tcp& ctcp){
+    _Locked++;
     _Socket=ctcp._Socket;
     _SocketPtr=ctcp._SocketPtr;
     _SocketPtrSize=ctcp._SocketPtrSize;
-    addlock_tcp(_Socket);
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -143,7 +92,6 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     _SocketPtrSize=sizeof(sockaddr_un);
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    addlock_tcp(_Socket);
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -192,14 +140,15 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    addlock_tcp(_Socket);
 }
                                         
 netplus::tcp::~tcp(){
-    if(_rmlock_tcp(_Socket)){
-        if(_Socket>=0)
-            ::close(_Socket);
-        operator delete(_SocketPtr,&_SocketPtr);
+    if(_Locked==0){
+       if(_Socket>=0)
+          ::close(_Socket);
+       operator delete(_SocketPtr,_SocketPtrSize);
+    }else{
+        --_Locked;
     }
 }
 
@@ -207,7 +156,6 @@ netplus::tcp::tcp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
     _Socket=sock;
-    addlock_tcp(_Socket);
 }
 
 
@@ -359,10 +307,10 @@ void netplus::tcp::getAddress(std::string &addr){
 }
 
 netplus::udp::udp(const netplus::udp& cudp){
+    _Locked++;
     _Socket=cudp._Socket;
     _SocketPtr=cudp._SocketPtr;
     _SocketPtrSize=cudp._SocketPtrSize;
-    addlock_udp(_Socket);
 }
 
 
@@ -389,7 +337,6 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
 
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    addlock_udp(_Socket);
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -435,17 +382,15 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    addlock_udp(_Socket);
 }
 
 netplus::udp::~udp(){
-    if(_rmlock_udp(_Socket)){
+    if(_Locked==0){
         if(_Socket>=0)
             ::close(_Socket);
-        if(!_UxPath.empty()){
-            unlink(_UxPath.c_str());
-        }
         operator delete(_SocketPtr,&_SocketPtrSize);
+    }else{
+        --_Locked;
     }
 }
 
@@ -453,7 +398,6 @@ netplus::udp::udp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
     _Socket=sock;
-    addlock_udp(_Socket);
 }
 
 

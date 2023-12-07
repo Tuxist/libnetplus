@@ -59,6 +59,8 @@ namespace netplus {
             int                 _Socket;
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
+        protected:
+            int                 _Locked;
         };
         
         class tcp : public socket{
