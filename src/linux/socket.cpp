@@ -456,6 +456,8 @@ UDPSEND:
 
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
+
+        throw exception;
     }
     return rval;
 }
@@ -487,6 +489,7 @@ UDPRECV:
 
         exception[NetException::Error] << "Socket recvData failed on Socket: " << socket->_Socket
                                        << " ErrorMsg: " <<  errstr;
+        throw exception;
     }
     return recvsize;
 }
