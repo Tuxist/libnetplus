@@ -25,6 +25,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
+
 #include <vector>
 #include <cstdio>
 #include <cstring>
@@ -35,15 +39,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <mutex>
 #include <string.h>
+#include <pthread.h>
 
 #include "exception.h"
 #include "socket.h"
-
-#ifdef _GNU_SOURCE
-#undef _GNU_SOURCE
-#endif
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 

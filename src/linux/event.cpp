@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/epoll.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <mutex>
 
 #include "socket.h"
 #include "exception.h"
