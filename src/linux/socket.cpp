@@ -133,7 +133,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
                            rp->ai_protocol);
         if (_Socket == -1)
             continue;
-        _SocketPtr = operator new(rp->ai_addrlen);
+        _SocketPtr = std::malloc(rp->ai_addrlen);
         memset(_SocketPtr, 0, rp->ai_addrlen);
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
@@ -151,7 +151,7 @@ netplus::tcp::~tcp(){
     if(_Locked==0){
        if(_Socket>=0)
           ::close(_Socket);
-       operator delete(_SocketPtr,_SocketPtrSize);
+       ::free(_SocketPtr);
     }else{
         --_Locked;
     }
