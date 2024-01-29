@@ -25,9 +25,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifdef _GNU_SOURCE
-#undef _GNU_SOURCE
-#endif
+#include <chrono>
+#include <thread>
 
 #include <vector>
 #include <cstdio>
@@ -206,7 +205,7 @@ unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::tcp::sendData(socket* socket, void* data, unsigned long size,int flags){
-TCPSEND:
+
     NetException exception;
     if(!socket){                                                                                     
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -221,8 +220,7 @@ TCPSEND:
                      );
     if(rval<0){
         if(errno==EAGAIN){
-            sleep(1);
-            goto TCPSEND;
+            return 0;
         }
 
         char errstr[512];
@@ -241,7 +239,7 @@ unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::tcp::recvData(socket* socket, void* data, unsigned long size,int flags){
-TCPRECV:
+
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -256,7 +254,7 @@ TCPRECV:
                          );
     if(recvsize<0){
         if(errno==EAGAIN)
-            goto TCPRECV;
+            return 0;
 
 
         char errstr[512];
@@ -435,7 +433,6 @@ unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::udp::sendData(socket* socket, void* data, unsigned long size,int flags){
-UDPSEND:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -448,8 +445,7 @@ UDPSEND:
                      );
     if(rval<0){
         if(errno==EAGAIN){
-            sleep(1);
-            goto UDPSEND;
+            return 0;
         }
         char errstr[512];
         strerror_r(errno,errstr,512);
@@ -468,7 +464,6 @@ unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long si
 }
 
 unsigned int netplus::udp::recvData(socket* socket, void* data, unsigned long size,int flags){
-UDPRECV:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -481,8 +476,7 @@ UDPRECV:
                          );
     if(recvsize<0){
         if(errno==EAGAIN){
-            sleep(1);
-            goto UDPRECV;
+            return 0;
         }
         char errstr[512];
         strerror_r(errno,errstr,512);
@@ -629,7 +623,6 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
 }
 
 unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size,int flags){
-SSLSEND:
     NetException exception;
     if(!socket){                                                                                     
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
@@ -644,8 +637,7 @@ SSLSEND:
                      );
     if(rval<0){
         if(errno==EAGAIN){
-            sleep(1);
-            goto SSLSEND;
+            return 0;
         }
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
@@ -658,7 +650,6 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
 }
 
 unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size,int flags){
-SSLRECV:
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
@@ -673,8 +664,7 @@ SSLRECV:
                          );
     if(recvsize<0){
         if(errno==EAGAIN){
-            sleep(1);
-            goto SSLRECV;
+            return 0;
         }
         exception[NetException::Error] << "Socket recvdata failed on Socket: "
                                           << socket->_Socket;

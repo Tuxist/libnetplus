@@ -25,7 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include <chrono>
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
+
 #include <string>
 #include <cryptplus/cryptplus.h>
 
