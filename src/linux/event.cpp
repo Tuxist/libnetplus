@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <vector>
+#include <chrono>
 #include <thread>
 #include <unistd.h>
 #include <signal.h>
@@ -182,41 +183,58 @@ namespace netplus {
         NetException exception;
         con *rcon = (con*)_Events[pos].data.ptr;
         char buf[BLOCKSIZE];
-        size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
-        if(rcvsize>0){
-            rcon->addRecvQueue(buf, rcvsize);
-            RequestEvent(rcon);
-        }else{
+        size_t rcvsize = 0, tries=0;
+        for(;;){
+            rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+
+            if(rcvsize!=0 || tries > 5)
+                break;
+
+            ++tries;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        if(rcvsize==0){
             NetException exp;
             exp[NetException::Error] << "ReadEvent: no data recived!";
             throw exp;
         }
+
+        rcon->addRecvQueue(buf, rcvsize);
+        RequestEvent(rcon);
     };
 
     void poll::WriteEventHandler(int pos) {
+
         con *wcon = (con*)_Events[pos].data.ptr;
+
         if(!wcon->getSendData()){
              wcon->sending(false);
              return;
         }
-        size_t sended = _ServerSocket->sendData(wcon->csock,
-            (void*)wcon->getSendData()->getData(),
-            wcon->getSendData()->getDataLength(), 0);
 
-        if(sended!=0){
-	    ResponseEvent(wcon);
-            wcon->resizeSendQueue(sended);
-        }else{
-           NetException exp;
-           switch(errno){
-                case EAGAIN:
-                    exp[NetException::Note] << "WriteEvent: Resource temporarily unavailable";
-                    throw exp;
-                default:
-                    exp[NetException::Error] << "WriteEvent: no data sended";
-                    throw exp;
-            }
+        size_t sended=0,tries=0;
+
+        for(;;){
+            sended = _ServerSocket->sendData(wcon->csock,
+                        (void*)wcon->getSendData()->getData(),
+                        wcon->getSendData()->getDataLength(), 0);
+
+            if(sended!=0 || tries > 5)
+                break;
+
+            ++tries;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        };
+        if(sended==0){
+            NetException exp;
+            exp[NetException::Error] << "WriteEvent: max tries Reached!";
+            throw exp;
         }
+        ResponseEvent(wcon);
+        wcon->resizeSendQueue(sended);
     };
 
 
