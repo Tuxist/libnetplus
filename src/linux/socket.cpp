@@ -49,6 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 netplus::socket::socket(){
     _Socket=-1;
     _Locked=0;
+    _SocketPtr=nullptr;
 }
 
 netplus::socket::~socket(){
