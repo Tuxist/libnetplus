@@ -2,8 +2,8 @@
 BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00l\x00i\x00b\x00n\x00e\x00t\x00p\x00l\x00u\x00s)
 
 [CMake]
-Build Directory Count=2
-Current Build Directory Index-Host System=0
+Build Directory Count=3
+Current Build Directory Index-Host System=2
 Current Build Directory Index-Host-System=1
 Temporary Build Directory Index=1
 
@@ -25,7 +25,7 @@ CMake Executable=/usr/bin/cmake
 Environment Profile=
 Extra Arguments=
 Install Directory=/usr/local
-Runtime=Host-System
+Runtime=Host System
 
 [Project]
 VersionControlSupport=kdevgit

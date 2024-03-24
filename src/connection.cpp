@@ -95,8 +95,12 @@ netplus::con::condata *netplus::con::resizeSendQueue(size_t size){
     return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
 }
 
-netplus::con::condata* netplus::con::getSendData(){
-  return _SendDataFirst;
+netplus::con::condata* netplus::con::getSendFirst(){
+    return _SendDataFirst;
+}
+
+netplus::con::condata * netplus::con::getSendLast(){
+    return _SendDataLast;
 }
 
 size_t netplus::con::getSendLength(){
@@ -132,8 +136,12 @@ netplus::con::condata *netplus::con::resizeRecvQueue(size_t size){
     return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
 }
 
-netplus::con::condata *netplus::con::getRecvData(){
+netplus::con::condata *netplus::con::getRecvFirst(){
   return _ReadDataFirst;
+}
+
+netplus::con::condata * netplus::con::getRecvLast(){
+    return _ReadDataLast;
 }
 
 size_t netplus::con::getRecvLength(){
