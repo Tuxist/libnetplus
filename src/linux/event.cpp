@@ -209,7 +209,7 @@ namespace netplus {
 
         con *wcon = (con*)_Events[pos].data.ptr;
 
-        if(!wcon->getSendData()){
+        if(!wcon->getSendFirst()){
              wcon->sending(false);
              return;
         }
@@ -218,8 +218,8 @@ namespace netplus {
 
         for(;;){
             sended = _ServerSocket->sendData(wcon->csock,
-                        (void*)wcon->getSendData()->getData(),
-                        wcon->getSendData()->getDataLength(), 0);
+                        (void*)wcon->getSendFirst()->getData(),
+                        wcon->getSendFirst()->getDataLength(), 0);
 
             if(sended!=0 || tries > 5)
                 break;
