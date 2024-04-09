@@ -31,10 +31,12 @@
 
 #include <string>
 
-#include "mbedtls/net_sockets.h"
-#include "mbedtls/ssl.h"
-#include "mbedtls/ctr_drbg.h"
-#include "mbedtls/entropy.h"
+extern "C" {
+    #include "mbedtls/net_sockets.h"
+    #include "mbedtls/ssl.h"
+    #include "mbedtls/ctr_drbg.h"
+    #include "mbedtls/entropy.h"
+}
 
 #pragma once
 
