@@ -552,6 +552,11 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
         throw exception;
     }
 
+    if( ( ret = mbedtls_x509_crt_parse(&_Cacert, cert,certlen) ) != 0 ){
+        exception[NetException::Critical] << " failed\n  !  mbedtls_x509_crt_parse returned -0x" << -ret ;
+        throw exception;
+    }
+
     mbedtls_ssl_conf_ca_chain( &_SSLConf, &_Cacert, NULL );
 
     memset(_Addr,0,255);
