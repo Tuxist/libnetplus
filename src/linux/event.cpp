@@ -92,7 +92,7 @@ namespace netplus {
         setevent.data.ptr = nullptr;
 
         if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,
-            _ServerSocket->getSocket(),(struct epoll_event*)&setevent) < 0) {
+            _ServerSocket->fd(),(struct epoll_event*)&setevent) < 0) {
             exception[NetException::Critical] << "initEventHandler: can't create epoll";
             throw exception;
         }
@@ -125,7 +125,7 @@ namespace netplus {
                 continue;
 
             int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-                                delcon->csock->getSocket(), 0);
+                                delcon->csock->fd(), 0);
 
             if (ect < 0) {
                 if(errno==ENOENT)
@@ -165,7 +165,7 @@ namespace netplus {
             setevent.events = EPOLLIN;
             setevent.data.ptr = ccon;
 
-            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->getSocket(), (struct epoll_event*)&setevent);
+            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->fd(), (struct epoll_event*)&setevent);
 
             if ( estate < 0 ) {
                 exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
@@ -263,7 +263,7 @@ namespace netplus {
         setevent.events = events;
         setevent.data.ptr = curcon;
         if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,
-            curcon->csock->getSocket(), (struct epoll_event*)&setevent) < 0) {
+            curcon->csock->fd(), (struct epoll_event*)&setevent) < 0) {
             except[NetException::Error] << "_setEpollEvents: can change socket!";
             throw except;
         }

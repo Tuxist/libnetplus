@@ -36,6 +36,7 @@ extern "C" {
     #include "mbedtls/ssl.h"
     #include "mbedtls/ctr_drbg.h"
     #include "mbedtls/entropy.h"
+    #include "mbedtls/pem.h"
 }
 
 #pragma once
@@ -46,8 +47,7 @@ namespace netplus {
         public:
             socket();
             virtual      ~socket();
-            void         setnonblocking();
-            int          getSocket();
+            virtual void  setnonblocking();
             
             
             virtual socket      *accept()=0;
@@ -59,14 +59,15 @@ namespace netplus {
             virtual unsigned int sendData(socket *socket,void *data,unsigned long size)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
             
-            virtual socket* connect()=0;
+            virtual socket*      connect()=0;
 
-            virtual void getAddress(std::string &addr)=0;
+            virtual void         getAddress(std::string &addr)=0;
 
-            int                 _Socket;
+            virtual int          fd()=0;
+
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
-        protected:
+            int                 _Socket;
             int                 _Locked;
         };
         
@@ -82,7 +83,8 @@ namespace netplus {
             socket       *accept();
             void          bind();
             void          listen();
-            
+            int           fd();
+
             int           getMaxconnections();
             
             unsigned int sendData(socket *socket,void *data,unsigned long size);
@@ -112,6 +114,7 @@ namespace netplus {
             socket       *accept();
             void          bind();
             void          listen();
+            int           fd();
 
             int           getMaxconnections();
 
@@ -139,7 +142,8 @@ namespace netplus {
             socket       *accept();
             void          bind();
             void          listen();
-            
+            int           fd();
+
             int           getMaxconnections();
             
             unsigned int sendData(socket *socket,void *data,unsigned long size);
@@ -147,6 +151,7 @@ namespace netplus {
             
             ssl* connect();
 
+            void setnonblocking();
             void getAddress(std::string &addr);
 
         private:
@@ -159,7 +164,7 @@ namespace netplus {
             mbedtls_ctr_drbg_context _SSLCTR_DRBG;
             mbedtls_ssl_context      _SSLCtx;
             mbedtls_ssl_config       _SSLConf;
-            mbedtls_x509_crt         _Cacert;
+            mbedtls_pem_context      _Cacert;
         };
 
         class quick : public socket{

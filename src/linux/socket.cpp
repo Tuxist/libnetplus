@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 
 #include "mbedtls/debug.h"
+#include "mbedtls/error.h"
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
@@ -64,10 +65,6 @@ void netplus::socket::setnonblocking(){
         exception[NetException::Error] << "Could not set ClientSocket nonblocking!";
         throw exception;
     }
-}
-
-int netplus::socket::getSocket(){
-    return _Socket;
 }
 
 netplus::tcp::tcp(const netplus::tcp& ctcp){
@@ -172,6 +169,10 @@ void netplus::tcp::listen(){
         exception[NetException::Critical] << "Can't listen Server Socket";
         throw exception;
     }
+}
+
+int netplus::tcp::fd(){
+    return _Socket;
 }
 
 int netplus::tcp::getMaxconnections(){
@@ -402,6 +403,10 @@ void netplus::udp::listen(){
     }
 }
 
+int netplus::udp::fd(){
+    return _Socket;
+}
+
 int netplus::udp::getMaxconnections(){
     return _Maxconnections;
 }
@@ -531,35 +536,40 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     mbedtls_net_init( &_Socket );
     mbedtls_ssl_init( &_SSLCtx );
     mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_x509_crt_init( &_Cacert );
+    mbedtls_pem_init( &_Cacert );
     mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
 
     int ret;
 
     mbedtls_entropy_init( &_SSLEntropy );
 
+    mbedtls_ssl_conf_rng(&_SSLConf, mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
+
     const char *pers = "libnet_ssl_server";
 
-    mbedtls_x509_crt_init( &_Cacert);
+    char err_str[256];
+
+    size_t use_len;
 
     if( ( ret = mbedtls_ctr_drbg_seed( &_SSLCTR_DRBG, mbedtls_entropy_func, &_SSLEntropy,
                                         (const unsigned char *) pers,
                                         strlen( pers ) ) ) != 0 ){
-        exception[NetException::Critical] << " failed\n  ! mbedtls_ctr_drbg_seed returned" << ret;
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] << "mbedtls_ctr_drbg_seed returned: " << err_str;
         throw exception;
     }
 
-    if( ( ret = mbedtls_x509_crt_parse(&_Cacert, key,keylen) ) != 0 ){
-        exception[NetException::Critical] << " failed\n  !  mbedtls_x509_crt_parse returned -0x" << -ret ;
+    if( ( ret = mbedtls_pem_read_buffer(&_Cacert,"-----BEGIN CERTIFICATE-----","-----END CERTIFICATE-----",cert,nullptr,0,&use_len) ) != 0 ){
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
     }
 
-    if( ( ret = mbedtls_x509_crt_parse(&_Cacert, cert,certlen) ) != 0 ){
-        exception[NetException::Critical] << " failed\n  !  mbedtls_x509_crt_parse returned -0x" << -ret ;
+    if( ( ret = mbedtls_pem_read_buffer(&_Cacert,"-----BEGIN PRIVATE KEY-----","-----END PRIVATE KEY-----",key,nullptr,0,&use_len) ) != 0 ){
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
     }
-
-    mbedtls_ssl_conf_ca_chain( &_SSLConf, &_Cacert, NULL );
 
     memset(_Addr,0,255);
 
@@ -571,6 +581,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     }
 
     _Port=port;
+
 }
 
 netplus::ssl::ssl(){
@@ -588,15 +599,41 @@ netplus::ssl::~ssl(){
 
 netplus::socket *netplus::ssl::accept(){
     NetException exception;
-    socket *csock=new ssl();
-    mbedtls_net_context myaddr;
-    csock->_Socket = mbedtls_net_accept(&_Socket,&myaddr,nullptr,0,nullptr);
-    if(csock->_Socket<0){
+    ssl *csock=new ssl();
+
+    int ret;
+    char err_str[256];
+
+    mbedtls_ssl_conf_rng( &_SSLConf, mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
+
+    if( (ret=mbedtls_net_accept(&_Socket,&csock->_Socket,nullptr,0,nullptr)) <0){
         delete csock;
         csock=nullptr;
-        exception[NetException::Error] << "Can't accept on Socket";
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Error] << "Can't accept on Socket: " << err_str;
         throw exception;
     }
+
+    if( (ret=mbedtls_ssl_setup(&_SSLCtx,&csock->_SSLConf)) <0){
+        delete csock;
+        csock=nullptr;
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Error] << "Can't accept on Socket: " << err_str;
+        throw exception;
+    }
+
+    mbedtls_ssl_set_bio(&_SSLCtx,&csock->_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+    while ((ret = mbedtls_ssl_handshake(&_SSLCtx)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            delete csock;
+            csock=nullptr;
+            mbedtls_strerror(ret, err_str, 256);
+            exception[NetException::Error] << "Can't accept on Socket: " << err_str;
+            throw exception;
+        }
+    }
+
     return csock;
 }
 
@@ -614,6 +651,10 @@ void netplus::ssl::bind(){
 void netplus::ssl::listen(){
     //not needed beause mbedtls_net_bind bind and listen in one funciton
     return;
+}
+
+int netplus::ssl::fd(){
+    return _Socket.fd;
 }
 
 int netplus::ssl::getMaxconnections(){
@@ -659,14 +700,34 @@ netplus::ssl* netplus::ssl::connect(){
 
     char port[255];
     snprintf(port,255,"%d",_Port);
-    int ret;
 
-    if ( (ret = mbedtls_net_connect(&_Socket,_Addr,port,MBEDTLS_NET_PROTO_TCP)) < 0) {
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting: " << ret;
+    if ( mbedtls_net_connect(&_Socket,_Addr,port,MBEDTLS_NET_PROTO_TCP) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting !";
         throw exception;
     }
+
+    mbedtls_ssl_set_bio(&_SSLCtx,&_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+    int ret;
+
+    while ((ret = mbedtls_ssl_handshake(&_SSLCtx)) != 0) {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            exception[NetException::Error] << "Can't connect on Socket";
+            throw exception;
+        }
+    }
+
     return this;
 }
+
+void netplus::ssl::setnonblocking(){
+    if(mbedtls_net_set_nonblock(&_Socket)<0){
+        NetException exception;
+        exception[NetException::Error] << "Could not set ClientSocket nonblocking!";
+        throw exception;
+    }
+}
+
 
 void netplus::ssl::getAddress(std::string &addr){
     if(!_SocketPtr)
