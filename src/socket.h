@@ -30,7 +30,11 @@
 #endif
 
 #include <string>
-#include <cryptplus/cryptplus.h>
+
+#include "mbedtls/net_sockets.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
 
 #pragma once
 
@@ -51,9 +55,7 @@ namespace netplus {
             virtual int          getMaxconnections()=0;
             
             virtual unsigned int sendData(socket *socket,void *data,unsigned long size)=0;
-            virtual unsigned int sendData(socket *socket,void *data,unsigned long size,int flags)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
-            virtual unsigned int recvData(socket *socket,void *data,unsigned long size,int flags)=0;
             
             virtual socket* connect()=0;
 
@@ -139,9 +141,7 @@ namespace netplus {
             int           getMaxconnections();
             
             unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
             unsigned int recvData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
             
             ssl* connect();
 
@@ -149,10 +149,15 @@ namespace netplus {
 
         private:
             ssl();
-            int              _Maxconnections;
-            std::string      _UxPath;
-            size_t           _Cipher;
-            cryptplus::x509 *_Cert;
+            int                      _Maxconnections;
+            int                      _Port;
+            char                     _Addr[255];
+            mbedtls_net_context      _Socket;
+            mbedtls_entropy_context  _SSLEntropy;
+            mbedtls_ctr_drbg_context _SSLCTR_DRBG;
+            mbedtls_ssl_context      _SSLCtx;
+            mbedtls_ssl_config       _SSLConf;
+            mbedtls_x509_crt         _Cacert;
         };
 
         class quick : public socket{

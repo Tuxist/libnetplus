@@ -219,7 +219,7 @@ namespace netplus {
         for(;;){
             sended = _ServerSocket->sendData(wcon->csock,
                         (void*)wcon->getSendFirst()->getData(),
-                        wcon->getSendFirst()->getDataLength(), 0);
+                        wcon->getSendFirst()->getDataLength());
 
             if(sended!=0 || tries > 5)
                 break;

@@ -44,6 +44,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
+#include "mbedtls/debug.h"
+
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
 netplus::socket::socket(){
@@ -506,6 +508,7 @@ netplus::udp* netplus::udp::connect(){
     }
     return clntsock;
 }
+
 void netplus::udp::getAddress(std::string &addr){
     if(!_SocketPtr)
         return;
@@ -519,55 +522,53 @@ void netplus::udp::getAddress(std::string &addr){
 
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : socket() {
-   NetException exception;
+    NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
 
 
+    mbedtls_net_init( &_Socket );
+    mbedtls_ssl_init( &_SSLCtx );
+    mbedtls_ssl_config_init( &_SSLConf );
+    mbedtls_x509_crt_init( &_Cacert );
+    mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
 
-    struct addrinfo hints,*result,*rp;
+    int ret;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    hints.ai_protocol = 0;
-    hints.ai_canonname = NULL;
-    hints.ai_addr = NULL;
-    hints.ai_next = NULL;
+    mbedtls_entropy_init( &_SSLEntropy );
 
-    int tsock;
+    const char *pers = "libnet_ssl_server";
 
-    char serv[512];
-    snprintf(serv,512,"%d",port);
-
-    if ((tsock=::getaddrinfo(addr, serv,&hints,&result)) < 0) {
-        exception[NetException::Critical] << "Socket Invalid address/ Address not supported";
+    if( ( ret = mbedtls_ctr_drbg_seed( &_SSLCTR_DRBG, mbedtls_entropy_func, &_SSLEntropy,
+                                        (const unsigned char *) pers,
+                                        strlen( pers ) ) ) != 0 ){
+        exception[NetException::Critical] << " failed\n  ! mbedtls_ctr_drbg_seed returned" << ret;
         throw exception;
     }
 
-    for (rp = result; rp != nullptr; rp = rp->ai_next) {
-        _Socket = ::socket(rp->ai_family, rp->ai_socktype,
-                           rp->ai_protocol);
-        if (_Socket == -1)
-            continue;
-        _SocketPtr = operator new(rp->ai_addrlen);
-        memset(_SocketPtr, 0, rp->ai_addrlen);
-        memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
-        _SocketPtrSize=rp->ai_addrlen;
-
-        break;
+    if( ( ret = mbedtls_x509_crt_parse(&_Cacert, cert,certlen) ) != 0 ){
+        exception[NetException::Critical] << " failed\n  !  mbedtls_x509_crt_parse returned -0x" << -ret ;
+        throw exception;
     }
 
-    ::freeaddrinfo(result);
+    if( ( ret = mbedtls_x509_crt_parse(&_Cacert, key,keylen) ) != 0 ){
+        exception[NetException::Critical] << " failed\n  !  mbedtls_x509_crt_parse returned -0x" << -ret ;
+        throw exception;
+    }
 
-    int optval = 1;
-    setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    
-    _Cert = new cryptplus::x509(cert,certlen);
-    write(1,key,keylen);
-    
+    mbedtls_ssl_conf_ca_chain( &_SSLConf, &_Cacert, NULL );
+
+    memset(_Addr,0,255);
+
+    if(strlen(addr)<255){
+        memcpy(_Addr,addr,strlen(addr)+1);
+    }else{
+        exception[NetException::Critical] <<"Addr too long can't copy !";
+        throw exception;
+    }
+
+    _Port=port;
 }
 
 netplus::ssl::ssl(){
@@ -576,43 +577,41 @@ netplus::ssl::ssl(){
 }
 
 netplus::ssl::~ssl(){
-    delete _Cert;
-    close(_Socket);
-    operator delete(_SocketPtr,&_SocketPtrSize);
+    mbedtls_net_free(&_Socket);
+    mbedtls_ssl_free(&_SSLCtx);
+    mbedtls_ssl_config_free(&_SSLConf);
+    mbedtls_ctr_drbg_free(&_SSLCTR_DRBG);
+    mbedtls_entropy_free(&_SSLEntropy);
 }
 
 netplus::socket *netplus::ssl::accept(){
     NetException exception;
     socket *csock=new ssl();
-    struct sockaddr_storage myaddr;
-    socklen_t myaddrlen;
-    csock->_Socket = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
+    mbedtls_net_context myaddr;
+    csock->_Socket = mbedtls_net_accept(&_Socket,&myaddr,nullptr,0,nullptr);
     if(csock->_Socket<0){
         delete csock;
         csock=nullptr;
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
-    csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = operator new(myaddrlen);
-    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
     return csock;
 }
 
 void netplus::ssl::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), _SocketPtrSize) < 0){
-        exception[NetException::Error] << "Can't bind Server Socket";
+    int ret=0;
+    char port[255];
+    snprintf(port,255,"%d",_Port);
+    if ((ret = mbedtls_net_bind(&_Socket,_Addr,port, MBEDTLS_NET_PROTO_TCP)) != 0) {
+        exception[NetException::Error] << " failed\n  ! mbedtls_net_bind returned" << ret;
         throw exception;
     }
 }
 
 void netplus::ssl::listen(){
-    NetException httpexception;
-    if(::listen(_Socket,_Maxconnections) < 0){
-        httpexception[NetException::Critical] << "Can't listen Server Socket";
-        throw httpexception;
-    }  
+    //not needed beause mbedtls_net_bind bind and listen in one funciton
+    return;
 }
 
 int netplus::ssl::getMaxconnections(){
@@ -620,22 +619,12 @@ int netplus::ssl::getMaxconnections(){
 }
      
 unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size){
-    return sendData(socket,data,size,0);
-}
-
-unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size,int flags){
     NetException exception;
-    if(!socket){                                                                                     
+    if(!socket){
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
-        throw exception;                                                                             
-    }   
-    int rval=::sendto(socket->_Socket,
-                        data,
-                        size,
-                        flags,
-                        (const struct sockaddr *)&socket->_SocketPtr,
-                        socket->_SocketPtrSize
-                     );
+        throw exception;
+    }
+    int rval=::mbedtls_ssl_write(&_SSLCtx,(unsigned char*)data,size);
     if(rval<0){
         if(errno==EAGAIN){
             return 0;
@@ -643,26 +632,15 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
         exception[NetException::Error] << "Socket senddata failed on Socket: " << socket->_Socket;
         throw exception;
     }
-    return rval;
-}
+    return rval;}
 
 unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size){
-    return recvData(socket,data,size,0);
-}
-
-unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size,int flags){
     NetException exception;
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
-        throw exception;        
+        throw exception;
     }
-    int recvsize=::recvfrom(socket->_Socket,
-                            data,
-                            size,
-                            flags,
-                            (struct sockaddr *)socket->_SocketPtr,
-                            &socket->_SocketPtrSize
-                         );
+    int recvsize=::mbedtls_ssl_read(&_SSLCtx,(unsigned char*)data,size);
     if(recvsize<0){
         if(errno==EAGAIN){
             return 0;
@@ -671,21 +649,21 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
                                           << socket->_Socket;
         throw exception;
     }
-    return recvsize;    
+    return recvsize;
 }
 
 netplus::ssl* netplus::ssl::connect(){
     NetException exception;
-     ssl *clntsock=new ssl();
 
-    clntsock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
+    char port[255];
+    snprintf(port,255,"%d",_Port);
+    int ret;
 
-    if (::connect(clntsock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
-        delete clntsock;
-        exception[NetException::Error] << "Socket connect: can't connect to server aborting ";
+    if ( (ret = mbedtls_net_connect(&_Socket,_Addr,port,MBEDTLS_NET_PROTO_TCP)) < 0) {
+        exception[NetException::Error] << "Socket connect: can't connect to server aborting: " << ret;
         throw exception;
     }
-    return clntsock;
+    return this;
 }
 
 void netplus::ssl::getAddress(std::string &addr){

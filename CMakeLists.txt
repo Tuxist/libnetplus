@@ -1,7 +1,9 @@
 project(systempp C CXX ASM )
 cmake_minimum_required(VERSION 3.0)
 
-find_package(libcryptplus REQUIRED)
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH} )
+
+find_package(mbedTLS REQUIRED )
 
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set (VISIBILTY_HIDDEN "__attribute__ ((visibility (\"hidden\")))")
