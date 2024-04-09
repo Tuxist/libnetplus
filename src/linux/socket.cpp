@@ -540,6 +540,8 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     const char *pers = "libnet_ssl_server";
 
+    mbedtls_x509_crt_init( &_Cacert);
+
     if( ( ret = mbedtls_ctr_drbg_seed( &_SSLCTR_DRBG, mbedtls_entropy_func, &_SSLEntropy,
                                         (const unsigned char *) pers,
                                         strlen( pers ) ) ) != 0 ){
