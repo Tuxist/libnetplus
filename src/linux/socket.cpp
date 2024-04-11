@@ -536,18 +536,25 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     mbedtls_net_init( &_Socket );
     mbedtls_ssl_init( &_SSLCtx );
     mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_pem_init( &_Cacert );
+    mbedtls_x509_crl_init( &_Cacert );
     mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
+    mbedtls_entropy_init( &_SSLEntropy );
 
     int ret;
+    char err_str[256];
 
-    mbedtls_entropy_init( &_SSLEntropy );
+    if ((ret = mbedtls_ssl_config_defaults(&_SSLConf,
+                                           MBEDTLS_SSL_IS_SERVER,
+                                           MBEDTLS_SSL_TRANSPORT_STREAM,
+                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] << "failed: mbedtls_ssl_config_defaults returned: " << err_str;
+        throw exception;
+    }
 
     mbedtls_ssl_conf_rng(&_SSLConf, mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
 
     const char *pers = "libnet_ssl_server";
-
-    char err_str[256];
 
     size_t use_len;
 
@@ -559,17 +566,35 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
         throw exception;
     }
 
-    if( ( ret = mbedtls_pem_read_buffer(&_Cacert,"-----BEGIN CERTIFICATE-----","-----END CERTIFICATE-----",cert,nullptr,0,&use_len) ) != 0 ){
+    mbedtls_pem_context pm;
+    mbedtls_pem_init(&pm);
+
+    if( ( ret = mbedtls_pem_read_buffer(&pm,"-----BEGIN CERTIFICATE-----","-----END CERTIFICATE-----",cert,nullptr,0,&use_len) ) != 0 ){
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
     }
 
-    if( ( ret = mbedtls_pem_read_buffer(&_Cacert,"-----BEGIN PRIVATE KEY-----","-----END PRIVATE KEY-----",key,nullptr,0,&use_len) ) != 0 ){
+    if( ( ret = mbedtls_x509_crl_parse(&_Cacert,pm.private_buf,pm.private_buflen ) )  != 0 ){
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
     }
+
+    mbedtls_pem_free(&pm);
+
+    mbedtls_pk_context pkey;
+    mbedtls_pk_init(&pkey);
+    ret =  mbedtls_pk_parse_key(&pkey, (const unsigned char *) key,
+                                keylen, nullptr, 0,
+                                mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
+    if (ret != 0) {
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] <<  " failed\n  !  mbedtls_pk_parse_key returned" << err_str;
+        throw exception;
+    }
+
+    mbedtls_pk_free(&pkey);
 
     memset(_Addr,0,255);
 
@@ -585,8 +610,11 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 }
 
 netplus::ssl::ssl(){
-    _SocketPtr=nullptr;
-    _SocketPtrSize=0;
+    mbedtls_net_init( &_Socket );
+    mbedtls_ssl_init( &_SSLCtx );
+    mbedtls_ssl_config_init( &_SSLConf );
+    mbedtls_x509_crl_init( &_Cacert );
+    mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
 }
 
 netplus::ssl::~ssl(){
@@ -604,7 +632,16 @@ netplus::socket *netplus::ssl::accept(){
     int ret;
     char err_str[256];
 
-    mbedtls_ssl_conf_rng( &_SSLConf, mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
+    mbedtls_ssl_set_bio(&csock->_SSLCtx,&csock->_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+    if( (ret=mbedtls_ssl_setup(&csock->_SSLCtx,&csock->_SSLConf)) <0){
+        delete csock;
+        csock=nullptr;
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Error] << "Can't setup on Socket: " << err_str;
+        throw exception;
+    }
+
 
     if( (ret=mbedtls_net_accept(&_Socket,&csock->_Socket,nullptr,0,nullptr)) <0){
         delete csock;
@@ -614,17 +651,7 @@ netplus::socket *netplus::ssl::accept(){
         throw exception;
     }
 
-    if( (ret=mbedtls_ssl_setup(&_SSLCtx,&csock->_SSLConf)) <0){
-        delete csock;
-        csock=nullptr;
-        mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Error] << "Can't accept on Socket: " << err_str;
-        throw exception;
-    }
-
-    mbedtls_ssl_set_bio(&_SSLCtx,&csock->_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
-
-    while ((ret = mbedtls_ssl_handshake(&_SSLCtx)) != 0) {
+    while ((ret = mbedtls_ssl_handshake(&csock->_SSLCtx)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             delete csock;
             csock=nullptr;

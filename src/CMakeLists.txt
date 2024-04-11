@@ -17,7 +17,7 @@ include_directories(
 
 add_library(netplus SHARED ${netplussrc})
 
-target_link_libraries(netplus PUBLIC ${MbedTLS_LIBRARIES})
+target_link_libraries(netplus PUBLIC MbedTLS::mbedcrypto MbedTLS::mbedtls MbedTLS::mbedx509)
 
 set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})

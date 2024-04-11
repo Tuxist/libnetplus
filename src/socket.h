@@ -164,7 +164,7 @@ namespace netplus {
             mbedtls_ctr_drbg_context _SSLCTR_DRBG;
             mbedtls_ssl_context      _SSLCtx;
             mbedtls_ssl_config       _SSLConf;
-            mbedtls_pem_context      _Cacert;
+            mbedtls_x509_crl         _Cacert;
         };
 
         class quick : public socket{
