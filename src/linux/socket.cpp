@@ -44,8 +44,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
-#include "mbedtls/debug.h"
-#include "mbedtls/error.h"
+#include <mbedtls/debug.h>
+#include <mbedtls/error.h>
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
@@ -536,7 +536,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     mbedtls_net_init( &_Socket );
     mbedtls_ssl_init( &_SSLCtx );
     mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_x509_crl_init( &_Cacert );
+    mbedtls_x509_crt_init( &_Cacert );
     mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
     mbedtls_entropy_init( &_SSLEntropy );
 
@@ -571,11 +571,11 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     if( ( ret = mbedtls_pem_read_buffer(&pm,"-----BEGIN CERTIFICATE-----","-----END CERTIFICATE-----",cert,nullptr,0,&use_len) ) != 0 ){
         mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
+        exception[NetException::Critical] << "mbedtls_pem_read_buffer returned: " << err_str ;
         throw exception;
     }
 
-    if( ( ret = mbedtls_x509_crl_parse(&_Cacert,pm.private_buf,pm.private_buflen ) )  != 0 ){
+    if( ( ret = mbedtls_x509_crt_parse(&_Cacert,pm.private_buf,pm.private_buflen ) )  != 0 ){
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
@@ -613,7 +613,7 @@ netplus::ssl::ssl(){
     mbedtls_net_init( &_Socket );
     mbedtls_ssl_init( &_SSLCtx );
     mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_x509_crl_init( &_Cacert );
+    mbedtls_x509_crt_init( &_Cacert );
     mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
 }
 
