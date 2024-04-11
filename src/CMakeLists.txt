@@ -11,13 +11,13 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 
 include_directories(
-  ${mbedTLS_INCLUDE_DIRS}
+  ${MbedTLS_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src
 )
 
 add_library(netplus SHARED ${netplussrc})
 
-target_link_libraries(netplus PUBLIC mbed::crypto mbed::tls mbed::x509)
+target_link_libraries(netplus PUBLIC ${MbedTLS_LIBRARIES})
 
 set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
