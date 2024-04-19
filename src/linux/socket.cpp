@@ -570,21 +570,12 @@ namespace netplus {
 };
 
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
-              size_t certlen,const unsigned char *key, size_t keylen) : socket() {
+              size_t certlen,const unsigned char *key, size_t keylen) : ssl() {
 
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
-    _SSLPrivate = new SSLPrivate;
-
-    mbedtls_net_init( &((SSLPrivate*)_SSLPrivate)->_Socket );
-    mbedtls_ssl_init( &((SSLPrivate*)_SSLPrivate)->_SSLCtx );
-    mbedtls_ssl_config_init( &((SSLPrivate*)_SSLPrivate)->_SSLConf );
-    mbedtls_x509_crt_init( &((SSLPrivate*)_SSLPrivate)->_Cacert );
-    mbedtls_ctr_drbg_init( &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG );
-    mbedtls_entropy_init( &((SSLPrivate*)_SSLPrivate)->_SSLEntropy );
-    mbedtls_pk_init(&((SSLPrivate*)_SSLPrivate)->_SSLPKey);
 
     int ret;
     char err_str[256];
@@ -668,7 +659,7 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     _Type=sockettype::SSL;
 }
 
-netplus::ssl::ssl(){
+netplus::ssl::ssl() : socket(){
      _SSLPrivate = new SSLPrivate;
      _Type=sockettype::SSL;
     mbedtls_net_init( &((SSLPrivate*)_SSLPrivate)->_Socket );
