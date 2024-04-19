@@ -137,6 +137,7 @@ namespace netplus {
             delete delcon->csock;
             DisconnectEvent(delcon);
             delete delcon;
+            _Events[i].data.ptr=nullptr;
         }
 
         _EventNums = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
