@@ -31,17 +31,10 @@
 
 #include <string>
 
-extern "C" {
-    #include "mbedtls/net_sockets.h"
-    #include "mbedtls/ssl.h"
-    #include "mbedtls/ctr_drbg.h"
-    #include "mbedtls/entropy.h"
-    #include "mbedtls/pem.h"
-}
-
 #pragma once
 
 namespace netplus {
+        enum sockettype {TCP=0,UDP=1,SSL=2};
 
         class socket {
         public:
@@ -50,7 +43,7 @@ namespace netplus {
             virtual void  setnonblocking();
             
             
-            virtual socket      *accept()=0;
+            virtual void         accept(socket *socket)=0;
             virtual void         bind()=0;
             virtual void         listen()=0;
             
@@ -69,10 +62,12 @@ namespace netplus {
             unsigned int        _SocketPtrSize;
             int                 _Socket;
             int                 _Locked;
+            int                 _Type;
         };
         
         class tcp : public socket{
         public:
+            tcp();
             tcp(const netplus::tcp& ctcp);
             tcp(const char *uxsocket,int maxconnections,
                 int sockopts);
@@ -80,7 +75,7 @@ namespace netplus {
                 int sockopts);
             ~tcp();
             
-            socket       *accept();
+            void          accept(socket *csock);
             void          bind();
             void          listen();
             int           fd();
@@ -104,6 +99,7 @@ namespace netplus {
         
         class udp : public socket{
         public:
+            udp();
             udp(const udp &cudp);
             udp(const char *uxsocket,int maxconnections,
                 int sockopts);
@@ -111,7 +107,7 @@ namespace netplus {
                 int sockopts);
             ~udp();
 
-            socket       *accept();
+            void          accept(socket *csock);;
             void          bind();
             void          listen();
             int           fd();
@@ -135,11 +131,12 @@ namespace netplus {
 
         class ssl : public socket{
         public:
+            ssl();
             ssl(const char *addr,int port,int maxconnections,
                 int sockopts,const unsigned char *cert,size_t certlen,const unsigned char *key, size_t keylen);
             ~ssl();
             
-            socket       *accept();
+            void          accept(socket *csock);
             void          bind();
             void          listen();
             int           fd();
@@ -155,16 +152,10 @@ namespace netplus {
             void getAddress(std::string &addr);
 
         private:
-            ssl();
             int                      _Maxconnections;
             int                      _Port;
             char                     _Addr[255];
-            mbedtls_net_context      _Socket;
-            mbedtls_entropy_context  _SSLEntropy;
-            mbedtls_ctr_drbg_context _SSLCTR_DRBG;
-            mbedtls_ssl_context      _SSLCtx;
-            mbedtls_ssl_config       _SSLConf;
-            mbedtls_x509_crt         _Cacert;
+            void                    *_SSLPrivate;
         };
 
         class quick : public socket{

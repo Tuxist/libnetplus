@@ -154,7 +154,13 @@ namespace netplus {
         con *ccon;
         try {
             ccon = new con(this);
-            ccon->csock = _ServerSocket->accept();
+            if(_ServerSocket->_Type==sockettype::TCP)
+                ccon->csock=new tcp();
+            else if(_ServerSocket->_Type==sockettype::UDP)
+                ccon->csock=new udp();
+            else if(_ServerSocket->_Type==sockettype::SSL)
+                ccon->csock=new ssl();
+            _ServerSocket->accept(ccon->csock);
             ccon->csock->setnonblocking();
             ccon->closecon=false;
             std::string ip;

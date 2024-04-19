@@ -44,8 +44,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
-#include <mbedtls/debug.h>
-#include <mbedtls/error.h>
+extern "C" {
+    #include "mbedtls/net_sockets.h"
+    #include "mbedtls/ssl.h"
+    #include "mbedtls/ctr_drbg.h"
+    #include "mbedtls/entropy.h"
+    #include "mbedtls/pem.h"
+    #include <mbedtls/debug.h>
+    #include <mbedtls/error.h>
+    #include <mbedtls/platform.h>
+}
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
@@ -53,6 +61,7 @@ netplus::socket::socket(){
     _Socket=-1;
     _Locked=0;
     _SocketPtr=nullptr;
+    _Type=-1;
 }
 
 netplus::socket::~socket(){
@@ -72,6 +81,7 @@ netplus::tcp::tcp(const netplus::tcp& ctcp){
     _Socket=ctcp._Socket;
     _SocketPtr=ctcp._SocketPtr;
     _SocketPtrSize=ctcp._SocketPtrSize;
+    _Type=sockettype::TCP;
 }
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -96,6 +106,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     _SocketPtrSize=sizeof(sockaddr_un);
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
+    _Type=sockettype::TCP;
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -144,6 +155,7 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
     
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
+    _Type=sockettype::TCP;
 }
                                         
 netplus::tcp::~tcp(){
@@ -156,10 +168,18 @@ netplus::tcp::~tcp(){
     }
 }
 
+netplus::tcp::tcp() : socket(){
+    _SocketPtr=nullptr;
+    _SocketPtrSize=0;
+    _Socket=-1;
+    _Type=sockettype::TCP;
+}
+
 netplus::tcp::tcp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
     _Socket=sock;
+    _Type=sockettype::TCP;
 }
 
 
@@ -179,7 +199,7 @@ int netplus::tcp::getMaxconnections(){
     return _Maxconnections;
 }
 
-netplus::socket *netplus::tcp::accept(){
+void netplus::tcp::accept(socket *csock){
     NetException exception;
     struct sockaddr myaddr;
     socklen_t myaddrlen=sizeof(myaddr);
@@ -188,11 +208,11 @@ netplus::socket *netplus::tcp::accept(){
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
-    socket *csock=new tcp(sock);
-    csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = operator new(myaddrlen);
-    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
-    return csock;
+    socket *ccsock=csock;
+    ccsock->_SocketPtrSize = myaddrlen;
+    ccsock->_SocketPtr = operator new(myaddrlen);
+    memcpy(ccsock->_SocketPtr,&myaddr,myaddrlen);
+    csock=ccsock;
 }
 
 void netplus::tcp::bind(){
@@ -301,11 +321,20 @@ void netplus::tcp::getAddress(std::string &addr){
     addr=ipaddr;
 }
 
-netplus::udp::udp(const netplus::udp& cudp){
+
+netplus::udp::udp() : socket() {
+    _SocketPtr=nullptr;
+    _SocketPtrSize=0;
+    _Socket=-1;
+    _Type=sockettype::UDP;
+}
+
+netplus::udp::udp(const netplus::udp& cudp) : socket(){
     _Locked++;
     _Socket=cudp._Socket;
     _SocketPtr=cudp._SocketPtr;
     _SocketPtrSize=cudp._SocketPtrSize;
+    _Type=sockettype::UDP;
 }
 
 netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
@@ -331,6 +360,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     }
     _SocketPtrSize=sizeof(sockaddr_un);
     setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
+    _Type=sockettype::UDP;
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
@@ -376,6 +406,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 
     int optval = 1;
     setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
+    _Type=sockettype::UDP;
 }
 
 netplus::udp::~udp(){
@@ -392,6 +423,7 @@ netplus::udp::udp(int sock) : socket(){
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
     _Socket=sock;
+    _Type=sockettype::UDP;
 }
 
 
@@ -411,7 +443,7 @@ int netplus::udp::getMaxconnections(){
     return _Maxconnections;
 }
 
-netplus::socket *netplus::udp::accept(){
+void netplus::udp::accept(socket *csock){
     NetException exception;
     struct sockaddr_storage myaddr;
     socklen_t myaddrlen;
@@ -420,11 +452,11 @@ netplus::socket *netplus::udp::accept(){
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
     }
-    socket *csock=new udp(sock);
-    csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = operator new(myaddrlen);
-    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
-    return csock;
+    socket *ccsock=(udp*)csock;
+    ccsock->_SocketPtrSize = myaddrlen;
+    ccsock->_SocketPtr = operator new(myaddrlen);
+    memcpy(ccsock->_SocketPtr,&myaddr,myaddrlen);
+    csock=ccsock;
 }
 
 void netplus::udp::bind(){
@@ -525,25 +557,39 @@ void netplus::udp::getAddress(std::string &addr){
     addr=ipaddr;
 }
 
+namespace netplus {
+    struct HIDDEN SSLPrivate {
+            mbedtls_net_context      _Socket;
+            mbedtls_entropy_context  _SSLEntropy;
+            mbedtls_ctr_drbg_context _SSLCTR_DRBG;
+            mbedtls_ssl_context      _SSLCtx;
+            mbedtls_ssl_config       _SSLConf;
+            mbedtls_x509_crt         _Cacert;
+            mbedtls_pk_context       _SSLPKey;
+    };
+};
+
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : socket() {
+
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
         sockopts=SO_REUSEADDR;
+    _SSLPrivate = new SSLPrivate;
 
-
-    mbedtls_net_init( &_Socket );
-    mbedtls_ssl_init( &_SSLCtx );
-    mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_x509_crt_init( &_Cacert );
-    mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
-    mbedtls_entropy_init( &_SSLEntropy );
+    mbedtls_net_init( &((SSLPrivate*)_SSLPrivate)->_Socket );
+    mbedtls_ssl_init( &((SSLPrivate*)_SSLPrivate)->_SSLCtx );
+    mbedtls_ssl_config_init( &((SSLPrivate*)_SSLPrivate)->_SSLConf );
+    mbedtls_x509_crt_init( &((SSLPrivate*)_SSLPrivate)->_Cacert );
+    mbedtls_ctr_drbg_init( &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG );
+    mbedtls_entropy_init( &((SSLPrivate*)_SSLPrivate)->_SSLEntropy );
+    mbedtls_pk_init(&((SSLPrivate*)_SSLPrivate)->_SSLPKey);
 
     int ret;
     char err_str[256];
 
-    if ((ret = mbedtls_ssl_config_defaults(&_SSLConf,
+    if ((ret = mbedtls_ssl_config_defaults(&((SSLPrivate*)_SSLPrivate)->_SSLConf,
                                            MBEDTLS_SSL_IS_SERVER,
                                            MBEDTLS_SSL_TRANSPORT_STREAM,
                                            MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
@@ -552,13 +598,11 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
         throw exception;
     }
 
-    mbedtls_ssl_conf_rng(&_SSLConf, mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
-
     const char *pers = "libnet_ssl_server";
 
     size_t use_len;
 
-    if( ( ret = mbedtls_ctr_drbg_seed( &_SSLCTR_DRBG, mbedtls_entropy_func, &_SSLEntropy,
+    if( ( ret = mbedtls_ctr_drbg_seed( &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG, mbedtls_entropy_func, &((SSLPrivate*)_SSLPrivate)->_SSLEntropy,
                                         (const unsigned char *) pers,
                                         strlen( pers ) ) ) != 0 ){
         mbedtls_strerror(ret, err_str, 256);
@@ -575,26 +619,41 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
         throw exception;
     }
 
-    if( ( ret = mbedtls_x509_crt_parse(&_Cacert,pm.private_buf,pm.private_buflen ) )  != 0 ){
+    if( ( ret = mbedtls_x509_crt_parse(&((SSLPrivate*)_SSLPrivate)->_Cacert,pm.private_buf,pm.private_buflen ) )  != 0 ){
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Critical] << "mbedtls_x509_crt_parse returned: " << err_str ;
         throw exception;
     }
 
-    mbedtls_pem_free(&pm);
+    mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert,nullptr);
 
-    mbedtls_pk_context pkey;
-    mbedtls_pk_init(&pkey);
-    ret =  mbedtls_pk_parse_key(&pkey, (const unsigned char *) key,
-                                keylen, nullptr, 0,
-                                mbedtls_ctr_drbg_random, &_SSLCTR_DRBG);
-    if (ret != 0) {
+    if (mbedtls_ssl_conf_own_cert(&((SSLPrivate*)_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert, &((SSLPrivate*)_SSLPrivate)->_SSLPKey) != 0){
         mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Critical] <<  " failed\n  !  mbedtls_pk_parse_key returned" << err_str;
+        exception[NetException::Critical] << "mbedtls_ssl_conf_own_cert returned: " << err_str ;
         throw exception;
     }
 
-    mbedtls_pk_free(&pkey);
+    mbedtls_pem_free(&pm);
+
+    ret =  mbedtls_pk_parse_key(&((SSLPrivate*)_SSLPrivate)->_SSLPKey, (const unsigned char *) key,
+                                keylen, nullptr, 0,
+                                mbedtls_ctr_drbg_random, &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG);
+    if (ret != 0) {
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] <<  "mbedtls_pk_parse_key returned: " << err_str;
+        throw exception;
+    }
+
+
+    mbedtls_ssl_set_bio(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,&_Socket, mbedtls_net_send, mbedtls_net_recv, nullptr);
+
+    mbedtls_ssl_conf_rng(&((SSLPrivate*)_SSLPrivate)->_SSLConf, mbedtls_ctr_drbg_random, &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG);
+
+    if (mbedtls_ssl_conf_own_cert(&((SSLPrivate*)_SSLPrivate)->_SSLConf, &((SSLPrivate*)_SSLPrivate)->_Cacert, &((SSLPrivate*)_SSLPrivate)->_SSLPKey) != 0){
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Critical] <<  "mbedtls_ssl_conf_own_cert returned: " << err_str;
+        throw exception;
+    }
 
     memset(_Addr,0,255);
 
@@ -606,62 +665,76 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     }
 
     _Port=port;
-
+    _Type=sockettype::SSL;
 }
 
 netplus::ssl::ssl(){
-    mbedtls_net_init( &_Socket );
-    mbedtls_ssl_init( &_SSLCtx );
-    mbedtls_ssl_config_init( &_SSLConf );
-    mbedtls_x509_crt_init( &_Cacert );
-    mbedtls_ctr_drbg_init( &_SSLCTR_DRBG );
+     _SSLPrivate = new SSLPrivate;
+     _Type=sockettype::SSL;
+    mbedtls_net_init( &((SSLPrivate*)_SSLPrivate)->_Socket );
+    mbedtls_ssl_init( &((SSLPrivate*)_SSLPrivate)->_SSLCtx );
+    mbedtls_ssl_config_init( &((SSLPrivate*)_SSLPrivate)->_SSLConf );
+    mbedtls_x509_crt_init( &((SSLPrivate*)_SSLPrivate)->_Cacert );
+    mbedtls_ctr_drbg_init( &((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG );
+    mbedtls_entropy_init( &((SSLPrivate*)_SSLPrivate)->_SSLEntropy );
+    mbedtls_pk_init(&((SSLPrivate*)_SSLPrivate)->_SSLPKey);
 }
 
 netplus::ssl::~ssl(){
-    mbedtls_net_free(&_Socket);
-    mbedtls_ssl_free(&_SSLCtx);
-    mbedtls_ssl_config_free(&_SSLConf);
-    mbedtls_ctr_drbg_free(&_SSLCTR_DRBG);
-    mbedtls_entropy_free(&_SSLEntropy);
+    mbedtls_net_free(&((SSLPrivate*)_SSLPrivate)->_Socket);
+    mbedtls_ssl_free(&((SSLPrivate*)_SSLPrivate)->_SSLCtx);
+    mbedtls_ssl_config_free(&((SSLPrivate*)_SSLPrivate)->_SSLConf);
+    mbedtls_x509_crt_free( &((SSLPrivate*)_SSLPrivate)->_Cacert );
+    mbedtls_ctr_drbg_free(&((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG);
+    mbedtls_entropy_free(&((SSLPrivate*)_SSLPrivate)->_SSLEntropy);
+    mbedtls_pk_free(&((SSLPrivate*)_SSLPrivate)->_SSLPKey);
+    delete (SSLPrivate*)_SSLPrivate;
 }
 
-netplus::socket *netplus::ssl::accept(){
+void netplus::ssl::accept(socket *csock){
     NetException exception;
-    ssl *csock=new ssl();
 
     int ret;
     char err_str[256];
+    const char *pers = "libnet_ssl_server";
 
-    mbedtls_ssl_set_bio(&csock->_SSLCtx,&csock->_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
+    ssl *ccsock=(ssl*)csock;
 
-    if( (ret=mbedtls_ssl_setup(&csock->_SSLCtx,&csock->_SSLConf)) <0){
-        delete csock;
-        csock=nullptr;
+    memcpy(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf ,&((SSLPrivate*)_SSLPrivate)->_SSLConf,sizeof(((SSLPrivate*)_SSLPrivate)->_SSLConf));
+
+    if( ( ret = mbedtls_ctr_drbg_seed( &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLCTR_DRBG, mbedtls_entropy_func, &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLEntropy,
+                                        (const unsigned char *) pers,
+                                        strlen( pers ) ) ) != 0 ){
         mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Error] << "Can't setup on Socket: " << err_str;
+        exception[NetException::Critical] << "mbedtls_ctr_drbg_seed returned: " << err_str;
         throw exception;
     }
 
+    mbedtls_ssl_conf_rng(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf, mbedtls_ctr_drbg_random, &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLCTR_DRBG);
 
-    if( (ret=mbedtls_net_accept(&_Socket,&csock->_Socket,nullptr,0,nullptr)) <0){
-        delete csock;
-        csock=nullptr;
+    if( (ret=mbedtls_net_accept(&((SSLPrivate*)_SSLPrivate)->_Socket,&((SSLPrivate*) ccsock->_SSLPrivate)->_Socket,nullptr,0,nullptr)) !=0){
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Error] << "Can't accept on Socket: " << err_str;
         throw exception;
     }
 
-    while ((ret = mbedtls_ssl_handshake(&csock->_SSLCtx)) != 0) {
+    if ((ret = mbedtls_ssl_setup(&((SSLPrivate*) ccsock->_SSLPrivate)->_SSLCtx,&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf )) != 0) {
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Error] << "Can't mbedtls_ssl_setup on Socket: " << err_str;
+        throw exception;
+    }
+
+    mbedtls_ssl_set_bio(&((SSLPrivate*) ccsock->_SSLPrivate)->_SSLCtx,&((SSLPrivate*) ccsock->_SSLPrivate)->_Socket, mbedtls_net_send, mbedtls_net_recv, nullptr);
+
+    while ((ret = mbedtls_ssl_handshake(&((SSLPrivate*) ccsock->_SSLPrivate)->_SSLCtx)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-            delete csock;
-            csock=nullptr;
             mbedtls_strerror(ret, err_str, 256);
-            exception[NetException::Error] << "Can't accept on Socket: " << err_str;
+            exception[NetException::Error] << "Can't handshake on Socket: " << err_str;
             throw exception;
         }
     }
 
-    return csock;
+    csock=ccsock;
 }
 
 void netplus::ssl::bind(){
@@ -669,7 +742,7 @@ void netplus::ssl::bind(){
     int ret=0;
     char port[255];
     snprintf(port,255,"%d",_Port);
-    if ((ret = mbedtls_net_bind(&_Socket,_Addr,port, MBEDTLS_NET_PROTO_TCP)) != 0) {
+    if ((ret = mbedtls_net_bind(&((SSLPrivate*)_SSLPrivate)->_Socket,_Addr,port, MBEDTLS_NET_PROTO_TCP)) != 0) {
         exception[NetException::Error] << " failed\n  ! mbedtls_net_bind returned" << ret;
         throw exception;
     }
@@ -681,7 +754,7 @@ void netplus::ssl::listen(){
 }
 
 int netplus::ssl::fd(){
-    return _Socket.fd;
+    return ((SSLPrivate*)_SSLPrivate)->_Socket.fd;
 }
 
 int netplus::ssl::getMaxconnections(){
@@ -694,7 +767,7 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
         throw exception;
     }
-    int rval=::mbedtls_ssl_write(&_SSLCtx,(unsigned char*)data,size);
+    int rval=::mbedtls_ssl_write(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
     if(rval<0){
         if(errno==EAGAIN){
             return 0;
@@ -710,7 +783,7 @@ unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
         throw exception;
     }
-    int recvsize=::mbedtls_ssl_read(&_SSLCtx,(unsigned char*)data,size);
+    int recvsize=::mbedtls_ssl_read(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
     if(recvsize<0){
         if(errno==EAGAIN){
             return 0;
@@ -728,16 +801,16 @@ netplus::ssl* netplus::ssl::connect(){
     char port[255];
     snprintf(port,255,"%d",_Port);
 
-    if ( mbedtls_net_connect(&_Socket,_Addr,port,MBEDTLS_NET_PROTO_TCP) < 0) {
+    if ( mbedtls_net_connect(&((SSLPrivate*)_SSLPrivate)->_Socket,_Addr,port,MBEDTLS_NET_PROTO_TCP) < 0) {
         exception[NetException::Error] << "Socket connect: can't connect to server aborting !";
         throw exception;
     }
 
-    mbedtls_ssl_set_bio(&_SSLCtx,&_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
+    mbedtls_ssl_set_bio(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,&((SSLPrivate*)_SSLPrivate)->_Socket, mbedtls_net_send, mbedtls_net_recv, NULL);
 
     int ret;
 
-    while ((ret = mbedtls_ssl_handshake(&_SSLCtx)) != 0) {
+    while ((ret = mbedtls_ssl_handshake(&((SSLPrivate*)_SSLPrivate)->_SSLCtx)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             exception[NetException::Error] << "Can't connect on Socket";
             throw exception;
@@ -748,7 +821,7 @@ netplus::ssl* netplus::ssl::connect(){
 }
 
 void netplus::ssl::setnonblocking(){
-    if(mbedtls_net_set_nonblock(&_Socket)<0){
+    if(mbedtls_net_set_nonblock(&((SSLPrivate*)_SSLPrivate)->_Socket)<0){
         NetException exception;
         exception[NetException::Error] << "Could not set ClientSocket nonblocking!";
         throw exception;
@@ -766,19 +839,4 @@ void netplus::ssl::getAddress(std::string &addr){
         inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
     addr=ipaddr;
 }
-
-//             size_t        version;
-//             size_t        serial;
-//             size_t        signature_id;
-//             array<char>   issuer_name;
-//             time          notbefore;
-//             time          notafter;
-//             array<char>   subject;
-//             struct public_key_info {
-//                 array<char> algorithm;
-//                 array<char> public_key;
-//             };
-//             array<char>   signature_algorithm;
-//             array<char>   signature;
-
 
