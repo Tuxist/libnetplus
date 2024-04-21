@@ -45,11 +45,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 
 extern "C" {
-    #include "mbedtls/net_sockets.h"
-    #include "mbedtls/ssl.h"
-    #include "mbedtls/ctr_drbg.h"
-    #include "mbedtls/entropy.h"
-    #include "mbedtls/pem.h"
+    #include <mbedtls/net_sockets.h>
+    #include <mbedtls/ssl.h>
+    #include <mbedtls/ctr_drbg.h>
+    #include <mbedtls/entropy.h>
+    #include <mbedtls/pem.h>
     #include <mbedtls/debug.h>
     #include <mbedtls/error.h>
     #include <mbedtls/platform.h>
@@ -212,7 +212,6 @@ void netplus::tcp::accept(socket *csock){
     ccsock->_SocketPtrSize = myaddrlen;
     ccsock->_SocketPtr = operator new(myaddrlen);
     memcpy(ccsock->_SocketPtr,&myaddr,myaddrlen);
-    csock=ccsock;
 }
 
 void netplus::tcp::bind(){
@@ -456,7 +455,6 @@ void netplus::udp::accept(socket *csock){
     ccsock->_SocketPtrSize = myaddrlen;
     ccsock->_SocketPtr = operator new(myaddrlen);
     memcpy(ccsock->_SocketPtr,&myaddr,myaddrlen);
-    csock=ccsock;
 }
 
 void netplus::udp::bind(){
@@ -724,8 +722,6 @@ void netplus::ssl::accept(socket *csock){
             throw exception;
         }
     }
-
-    csock=ccsock;
 }
 
 void netplus::ssl::bind(){
