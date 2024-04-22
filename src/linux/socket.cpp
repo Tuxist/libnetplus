@@ -44,18 +44,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
+#define SSL_DEBUG_LEVEL 4
+
 extern "C" {
     #include <mbedtls/net_sockets.h>
     #include <mbedtls/ssl.h>
     #include <mbedtls/ctr_drbg.h>
     #include <mbedtls/entropy.h>
     #include <mbedtls/pem.h>
+#if SSL_DEBUG_LEVEL > 0
     #include <mbedtls/debug.h>
+#endif
     #include <mbedtls/error.h>
     #include <mbedtls/platform.h>
 }
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
+
 
 netplus::socket::socket(){
     _Socket=-1;
@@ -565,10 +570,63 @@ namespace netplus {
             mbedtls_x509_crt         _Cacert;
             mbedtls_pk_context       _SSLPKey;
     };
+#if SSL_DEBUG_LEVEL > 0
+    /**
+     * Debug callback for mbed TLS
+     * Just prints on the USB serial port
+     */
+    static void my_debug(void *ctx, int level, const char *file, int line,
+                         const char *str)
+    {
+        const char *p, *basename;
+        (void) ctx;
+
+        /* Extract basename from file */
+        for(p = basename = file; *p != '\0'; p++) {
+            if(*p == '/' || *p == '\\') {
+                basename = p + 1;
+            }
+        }
+
+        mbedtls_printf("%s:%04d: |%d| %s", basename, line, level, str);
+    }
+
+    /**
+     * Certificate verification callback for mbed TLS
+     * Here we only use it to display information on each cert in the chain
+     */
+    static int my_verify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *flags)
+    {
+        const uint32_t buf_size = 1024;
+        char *buf = new char[buf_size];
+        (void) data;
+
+        mbedtls_printf("\nVerifying certificate at depth %d:\n", depth);
+        mbedtls_x509_crt_info(buf, buf_size - 1, "  ", crt);
+        mbedtls_printf("%s", buf);
+
+        if (*flags == 0)
+            mbedtls_printf("No verification issue for this certificate\n");
+        else
+        {
+            mbedtls_x509_crt_verify_info(buf, buf_size, "  ! ", *flags);
+            mbedtls_printf("%s\n", buf);
+        }
+
+        delete[] buf;
+        return 0;
+    }
 };
+#endif
 
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : ssl() {
+
+#if  SSL_DEBUG_LEVEL > 0
+    mbedtls_ssl_conf_verify(&((SSLPrivate*)_SSLPrivate)->_SSLConf, my_verify, nullptr);
+    mbedtls_ssl_conf_dbg(&((SSLPrivate*)_SSLPrivate)->_SSLConf, my_debug, nullptr);
+    mbedtls_debug_set_threshold(4);
+#endif
 
     NetException exception;
     _Maxconnections=maxconnections;
@@ -615,12 +673,6 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
     }
 
     mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert,nullptr);
-
-    if (mbedtls_ssl_conf_own_cert(&((SSLPrivate*)_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert, &((SSLPrivate*)_SSLPrivate)->_SSLPKey) != 0){
-        mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Critical] << "mbedtls_ssl_conf_own_cert returned: " << err_str ;
-        throw exception;
-    }
 
     mbedtls_pem_free(&pm);
 
@@ -672,7 +724,7 @@ netplus::ssl::ssl() : socket(){
 netplus::ssl::~ssl(){
     mbedtls_net_free(&((SSLPrivate*)_SSLPrivate)->_Socket);
     mbedtls_ssl_free(&((SSLPrivate*)_SSLPrivate)->_SSLCtx);
-    mbedtls_ssl_config_free(&((SSLPrivate*)_SSLPrivate)->_SSLConf);
+    // mbedtls_ssl_config_free(&((SSLPrivate*)_SSLPrivate)->_SSLConf);
     mbedtls_x509_crt_free( &((SSLPrivate*)_SSLPrivate)->_Cacert );
     mbedtls_ctr_drbg_free(&((SSLPrivate*)_SSLPrivate)->_SSLCTR_DRBG);
     mbedtls_entropy_free(&((SSLPrivate*)_SSLPrivate)->_SSLEntropy);
@@ -689,7 +741,15 @@ void netplus::ssl::accept(socket *csock){
 
     ssl *ccsock=(ssl*)csock;
 
+    if( (ret=mbedtls_net_accept(&((SSLPrivate*)_SSLPrivate)->_Socket,&((SSLPrivate*) ccsock->_SSLPrivate)->_Socket,nullptr,0,nullptr)) !=0){
+        mbedtls_strerror(ret, err_str, 256);
+        exception[NetException::Error] << "Can't accept on Socket: " << err_str;
+        throw exception;
+    }
+
     memcpy(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf ,&((SSLPrivate*)_SSLPrivate)->_SSLConf,sizeof(((SSLPrivate*)_SSLPrivate)->_SSLConf));
+
+    mbedtls_ssl_conf_rng(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf, mbedtls_ctr_drbg_random, &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLCTR_DRBG);
 
     if( ( ret = mbedtls_ctr_drbg_seed( &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLCTR_DRBG, mbedtls_entropy_func, &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLEntropy,
                                         (const unsigned char *) pers,
@@ -699,13 +759,7 @@ void netplus::ssl::accept(socket *csock){
         throw exception;
     }
 
-    mbedtls_ssl_conf_rng(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf, mbedtls_ctr_drbg_random, &((SSLPrivate*)ccsock->_SSLPrivate)->_SSLCTR_DRBG);
-
-    if( (ret=mbedtls_net_accept(&((SSLPrivate*)_SSLPrivate)->_Socket,&((SSLPrivate*) ccsock->_SSLPrivate)->_Socket,nullptr,0,nullptr)) !=0){
-        mbedtls_strerror(ret, err_str, 256);
-        exception[NetException::Error] << "Can't accept on Socket: " << err_str;
-        throw exception;
-    }
+    mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert,nullptr);
 
     if ((ret = mbedtls_ssl_setup(&((SSLPrivate*) ccsock->_SSLPrivate)->_SSLCtx,&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf )) != 0) {
         mbedtls_strerror(ret, err_str, 256);
