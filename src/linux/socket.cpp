@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 
-#define SSL_DEBUG_LEVEL 4
+#define SSL_DEBUG_LEVEL 0
 #undef MBEDTLS_SSL_RECORD_SIZE_LIMIT
 
 extern "C" {
@@ -616,8 +616,8 @@ namespace netplus {
         delete[] buf;
         return 0;
     }
-};
 #endif
+};
 
 netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *cert,
               size_t certlen,const unsigned char *key, size_t keylen) : ssl() {
