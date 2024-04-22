@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 
 #define SSL_DEBUG_LEVEL 4
+#undef MBEDTLS_SSL_RECORD_SIZE_LIMIT
 
 extern "C" {
     #include <mbedtls/net_sockets.h>
@@ -60,7 +61,6 @@ extern "C" {
 }
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
-
 
 netplus::socket::socket(){
     _Socket=-1;
@@ -761,6 +761,8 @@ void netplus::ssl::accept(socket *csock){
 
     mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf,&((SSLPrivate*)_SSLPrivate)->_Cacert,nullptr);
 
+    psa_crypto_init();
+
     if ((ret = mbedtls_ssl_setup(&((SSLPrivate*) ccsock->_SSLPrivate)->_SSLCtx,&((SSLPrivate*)ccsock->_SSLPrivate)->_SSLConf )) != 0) {
         mbedtls_strerror(ret, err_str, 256);
         exception[NetException::Error] << "Can't mbedtls_ssl_setup on Socket: " << err_str;
@@ -804,11 +806,14 @@ int netplus::ssl::getMaxconnections(){
      
 unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size){
     NetException exception;
+
+    ssl *csocket=(ssl*)socket;
+
     if(!socket){
         exception[NetException::Error] << "Socket sendata failed invalid socket !";
         throw exception;
     }
-    int rval=::mbedtls_ssl_write(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
+    int rval=::mbedtls_ssl_write(&((SSLPrivate*)csocket->_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
     if(rval<0){
         if(errno==EAGAIN){
             return 0;
@@ -820,11 +825,14 @@ unsigned int netplus::ssl::sendData(socket *socket,void *data,unsigned long size
 
 unsigned int netplus::ssl::recvData(socket *socket,void *data,unsigned long size){
     NetException exception;
+
+    ssl *csocket=(ssl*)socket;
+
     if(!socket){
         exception[NetException::Error] << "Socket recvdata failed invalid socket!";
         throw exception;
     }
-    int recvsize=::mbedtls_ssl_read(&((SSLPrivate*)_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
+    int recvsize=::mbedtls_ssl_read(&((SSLPrivate*)csocket->_SSLPrivate)->_SSLCtx,(unsigned char*)data,size);
     if(recvsize<0){
         if(errno==EAGAIN){
             return 0;
