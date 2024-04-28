@@ -52,7 +52,7 @@ namespace netplus {
             virtual unsigned int sendData(socket *socket,void *data,unsigned long size)=0;
             virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
             
-            virtual socket*      connect()=0;
+            virtual void         connect(socket *csock)=0;
 
             virtual void         getAddress(std::string &addr)=0;
 
@@ -87,7 +87,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            tcp* connect();
+            void connect(socket *csock);
 
             void getAddress(std::string &addr);
 
@@ -119,7 +119,7 @@ namespace netplus {
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            udp* connect();
+            void connect(socket *csock);
 
             void getAddress(std::string &addr);
 
@@ -132,6 +132,9 @@ namespace netplus {
         class ssl : public socket{
         public:
             ssl();
+            /*client socket*/
+            ssl(const char *addr,int port,int maxconnections,int sockopts,const unsigned char *ca,size_t calen);
+            /*server socket*/
             ssl(const char *addr,int port,int maxconnections,
                 int sockopts,const unsigned char *cert,size_t certlen,const unsigned char *key, size_t keylen);
             ~ssl();
@@ -146,7 +149,7 @@ namespace netplus {
             unsigned int sendData(socket *socket,void *data,unsigned long size);
             unsigned int recvData(socket *socket,void *data,unsigned long size);
             
-            ssl* connect();
+            void connect(socket *csock);
 
             void setnonblocking();
             void getAddress(std::string &addr);
