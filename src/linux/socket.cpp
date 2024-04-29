@@ -200,6 +200,12 @@ int netplus::tcp::fd(){
     return _Socket;
 }
 
+netplus::tcp& netplus::tcp::operator=(int sock){
+     _Socket=sock;
+     return *this;
+};
+
+
 int netplus::tcp::getMaxconnections(){
     return _Maxconnections;
 }
@@ -440,6 +446,11 @@ void netplus::udp::listen(){
 int netplus::udp::fd(){
     return _Socket;
 }
+
+netplus::udp& netplus::udp::operator=(int sock){
+     _Socket=sock;
+     return *this;
+};
 
 int netplus::udp::getMaxconnections(){
     return _Maxconnections;
@@ -870,6 +881,11 @@ void netplus::ssl::listen(){
     //not needed beause mbedtls_net_bind bind and listen in one funciton
     return;
 }
+
+netplus::ssl& netplus::ssl::operator=(int sock){
+     ((SSLPrivate*)_SSLPrivate)->_Socket.fd=sock;
+     return *this;
+};
 
 int netplus::ssl::fd(){
     return ((SSLPrivate*)_SSLPrivate)->_Socket.fd;

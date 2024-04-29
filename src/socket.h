@@ -58,6 +58,8 @@ namespace netplus {
 
             virtual int          fd()=0;
 
+	    virtual socket&	 operator=(int sock)=0;
+
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
             int                 _Socket;
@@ -79,6 +81,7 @@ namespace netplus {
             void          bind();
             void          listen();
             int           fd();
+            tcp&          operator=(int socket);
 
             int           getMaxconnections();
             
@@ -111,6 +114,7 @@ namespace netplus {
             void          bind();
             void          listen();
             int           fd();
+            udp&          operator=(int socket);
 
             int           getMaxconnections();
 
@@ -143,7 +147,7 @@ namespace netplus {
             void          bind();
             void          listen();
             int           fd();
-
+            ssl&          operator=(int socket);
             int           getMaxconnections();
             
             unsigned int sendData(socket *socket,void *data,unsigned long size);
