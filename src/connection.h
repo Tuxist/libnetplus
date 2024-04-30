@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <memory>
 #include <atomic>
 
 #pragma once
@@ -48,7 +49,7 @@ namespace netplus {
                 friend class    con;
             };
             
-            con(eventapi *event,socket &clsock);
+            con(eventapi *event);
             ~con();
             
             /*Cache helper functions*/
@@ -76,7 +77,7 @@ namespace netplus {
             size_t   getRecvLength();
             
             /*clientsocket*/
-            socket  &csock;
+            std::shared_ptr<socket> csock;
 
             /*set sending state*/
             void    sending(bool state);
@@ -84,7 +85,7 @@ namespace netplus {
 
             std::atomic<bool> closecon;
         protected:
-            con(socket &clsock);
+            con();
             /*Incomming Data*/
             size_t   _ReadDataLength;
             /*Outgoing Data*/

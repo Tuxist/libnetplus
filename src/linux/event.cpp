@@ -125,7 +125,7 @@ namespace netplus {
                 continue;
 
             int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-                                delcon->csock.fd(), 0);
+                                delcon->csock->fd(), 0);
 
             if (ect < 0) {
                 if(errno==ENOENT)
@@ -151,39 +151,38 @@ namespace netplus {
 
     void poll::ConnectEventHandler(int pos)  {
         NetException exception;
-        con *ccon=nullptr;
+        con *ccon=new con();
         try {
             if(_ServerSocket->_Type==sockettype::TCP){
-                tcp clsock;
-		ccon = new con(clsock);
+                ccon->csock=std::make_shared<tcp>();
                 _ServerSocket->accept(ccon->csock);
+                ccon->csock->setnonblocking();
             }else if(_ServerSocket->_Type==sockettype::UDP){
-                udp clsock;
-                ccon = new con(clsock);
+                ccon->csock=std::make_shared<udp>();
                 _ServerSocket->accept(ccon->csock);
             }else if(_ServerSocket->_Type==sockettype::SSL){
-                ssl clsock;
-                ccon = new con(clsock);
+                ccon->csock=std::make_shared<ssl>();
                 _ServerSocket->accept(ccon->csock);
 	    }else{
                 exception[NetException::Error] << "ConnectEventHandler: Protocoll are supported";
                 throw exception;
 
             }
-            ccon->csock.setnonblocking();
             ccon->closecon=false;
             std::string ip;
-            ccon->csock.getAddress(ip);
+            ccon->csock->getAddress(ip);
             std::cout << "Connected: " << ip  << std::endl;
 
             struct poll_event setevent { 0 };
             setevent.events = EPOLLIN;
             setevent.data.ptr = ccon;
 
-            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock.fd(), (struct epoll_event*)&setevent);
+            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD, ccon->csock->fd(), (struct epoll_event*)&setevent);
 
             if ( estate < 0 ) {
-                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll";
+                char errstr[255];
+                strerror_r(errno,errstr,255);
+                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                 throw exception;
             }
         } catch (NetException& e) {
@@ -277,7 +276,7 @@ namespace netplus {
         setevent.events = events;
         setevent.data.ptr = curcon;
         if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,
-            curcon->csock.fd(), (struct epoll_event*)&setevent) < 0) {
+            curcon->csock->fd(), (struct epoll_event*)&setevent) < 0) {
             except[NetException::Error] << "_setEpollEvents: can change socket!";
             throw except;
         }

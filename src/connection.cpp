@@ -261,7 +261,7 @@ int netplus::con::searchValue(con::condata* startblock, con::condata** findblock
     return -1;
 }
 
-netplus::con::con(eventapi *event,socket &clsock) : csock(clsock){
+netplus::con::con(eventapi *event){
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
     _ReadDataLength=0;
@@ -272,7 +272,7 @@ netplus::con::con(eventapi *event,socket &clsock) : csock(clsock){
     _sending=false;
 }
 
-netplus::con::con(socket &clsock) : csock(clsock){
+netplus::con::con(){
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
     _ReadDataLength=0;
