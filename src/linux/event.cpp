@@ -151,7 +151,7 @@ namespace netplus {
 
     void poll::ConnectEventHandler(int pos)  {
         NetException exception;
-        con *ccon=new con();
+        con *ccon=new con(this);
         try {
             if(_ServerSocket->_Type==sockettype::TCP){
                 ccon->csock=std::make_shared<tcp>();
