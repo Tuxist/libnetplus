@@ -1,6 +1,5 @@
 project(systempp C CXX ASM )
 cmake_minimum_required(VERSION 3.0)
-
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH} )
 
 find_package(MbedTLS REQUIRED)
@@ -11,7 +10,8 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_CXX_FLAGS 
         "${CMAKE_CXX_FLAGS} \
         -fPIC \
-        -Wall "
+        -Wall \
+	-Woverloaded-virtual "
     )
 
     set(CMAKE_C_FLAGS 

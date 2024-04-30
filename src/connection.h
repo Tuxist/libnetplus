@@ -48,7 +48,7 @@ namespace netplus {
                 friend class    con;
             };
             
-            con(eventapi *event);
+            con(eventapi *event,socket &clsock);
             ~con();
             
             /*Cache helper functions*/
@@ -76,7 +76,7 @@ namespace netplus {
             size_t   getRecvLength();
             
             /*clientsocket*/
-            socket  *csock;
+            socket  &csock;
 
             /*set sending state*/
             void    sending(bool state);
@@ -84,7 +84,7 @@ namespace netplus {
 
             std::atomic<bool> closecon;
         protected:
-            con();
+            con(socket &clsock);
             /*Incomming Data*/
             size_t   _ReadDataLength;
             /*Outgoing Data*/
@@ -105,6 +105,6 @@ namespace netplus {
             /*if pollout*/
             bool      _sending;
 
-            friend class event;
+            friend class poll;
         };
 };

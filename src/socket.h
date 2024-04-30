@@ -43,16 +43,16 @@ namespace netplus {
             virtual void  setnonblocking();
             
             
-            virtual void         accept(socket *socket)=0;
+            virtual void         accept(socket &csock)=0;
             virtual void         bind()=0;
             virtual void         listen()=0;
             
             virtual int          getMaxconnections()=0;
             
-            virtual unsigned int sendData(socket *socket,void *data,unsigned long size)=0;
-            virtual unsigned int recvData(socket *socket,void *data,unsigned long size)=0;
+            virtual unsigned int sendData(socket &csock,void *data,unsigned long size)=0;
+            virtual unsigned int recvData(socket &csock,void *data,unsigned long size)=0;
             
-            virtual void         connect(socket *csock)=0;
+            virtual void         connect(socket &csock)=0;
 
             virtual void         getAddress(std::string &addr)=0;
 
@@ -65,6 +65,7 @@ namespace netplus {
             int                 _Socket;
             int                 _Locked;
             int                 _Type;
+            void               *_Extension;
         };
         
         class tcp : public socket{
@@ -77,7 +78,7 @@ namespace netplus {
                 int sockopts);
             ~tcp();
             
-            void          accept(socket *csock);
+            void  accept(socket &csock);
             void          bind();
             void          listen();
             int           fd();
@@ -85,12 +86,12 @@ namespace netplus {
 
             int           getMaxconnections();
             
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+            unsigned int sendData(socket &socket,void *data,unsigned long size);
+            unsigned int sendData(socket &socket,void *data,unsigned long size,int flags);
+            unsigned int recvData(socket &socket,void *data,unsigned long size);
+            unsigned int recvData(socket &socket,void *data,unsigned long size,int flags);
 
-            void connect(socket *csock);
+            virtual void connect(socket &csock);
 
             void getAddress(std::string &addr);
 
@@ -110,7 +111,7 @@ namespace netplus {
                 int sockopts);
             ~udp();
 
-            void          accept(socket *csock);;
+            void          accept(socket &csock);
             void          bind();
             void          listen();
             int           fd();
@@ -118,12 +119,12 @@ namespace netplus {
 
             int           getMaxconnections();
 
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+            unsigned int sendData(socket &socket,void *data,unsigned long size);
+            unsigned int sendData(socket &socket,void *data,unsigned long size,int flags);
+            unsigned int recvData(socket &socket,void *data,unsigned long size);
+            unsigned int recvData(socket &socket,void *data,unsigned long size,int flags);
 
-            void connect(socket *csock);
+            void connect(socket &csock);
 
             void getAddress(std::string &addr);
 
@@ -143,17 +144,17 @@ namespace netplus {
                 int sockopts,const unsigned char *cert,size_t certlen,const unsigned char *key, size_t keylen);
             ~ssl();
             
-            void          accept(socket *csock);
+            void          accept(socket &csock);
             void          bind();
             void          listen();
             int           fd();
             ssl&          operator=(int socket);
             int           getMaxconnections();
             
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
+            unsigned int sendData(socket &socket,void *data,unsigned long size);
+            unsigned int recvData(socket &socket,void *data,unsigned long size);
             
-            void connect(socket *csock);
+            void connect(socket &csock);
 
             void setnonblocking();
             void getAddress(std::string &addr);
@@ -162,7 +163,6 @@ namespace netplus {
             int                      _Maxconnections;
             int                      _Port;
             char                     _Addr[255];
-            void                    *_SSLPrivate;
         };
 
         class quick : public socket{
