@@ -36,6 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <mutex>
 
+#include <cstring>
+#include <errno.h>
+
 #include "socket.h"
 #include "exception.h"
 #include "eventapi.h"
@@ -45,6 +48,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SENDEVENT 1
 
 #define BLOCKSIZE 16384
+
+#ifdef __GNU_SOURCE
+#undef __GNU_SOURCE
+#endif
 
 struct poll_event {
     uint32_t events;

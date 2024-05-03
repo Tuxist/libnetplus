@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <vector>
 #include <memory>
 #include <atomic>
 
@@ -55,7 +56,7 @@ namespace netplus {
             /*Cache helper functions*/
             
             int             copyValue(condata* startblock, size_t startpos,
-                                      condata* endblock, size_t endpos, std::string &buffer);
+                                      condata* endblock, size_t endpos, std::vector<char> &buffer);
             int             searchValue(condata* startblock, condata** findblock,
                                         const char* keyword);
             int             searchValue(condata* startblock, condata** findblock,

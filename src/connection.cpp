@@ -208,29 +208,32 @@ HAVEDATA:
 }
                                                                
 int netplus::con::copyValue(con::condata* startblock, size_t startpos,
-    con::condata* endblock, size_t endpos, std::string& buffer) {
+    con::condata* endblock, size_t endpos, std::vector<char>& buffer) {
 
     con::condata* curdat = startblock;
 
     do {
         if (curdat == startblock && curdat == endblock) {
-            buffer += curdat->_Data.substr(startpos, endpos - startpos);
+            std::copy(curdat->_Data.begin()+startpos, curdat->_Data.begin()+endpos,
+                      std::inserter<std::vector<char>>(buffer,buffer.end()));
             break;
         }
         else if (curdat == startblock) {
-            size_t len = curdat->_Data.length();
-            buffer += curdat->_Data.substr(startpos, len - startpos);
+            std::copy(curdat->_Data.begin()+startpos,curdat->_Data.end(),
+                      std::inserter<std::vector<char>>(buffer,buffer.end()));
         }
         else if (curdat == endblock) {
-            buffer += curdat->_Data.substr(0, endpos);
+            std::copy(curdat->_Data.begin(),curdat->_Data.begin()+endpos,
+                      std::inserter<std::vector<char>>(buffer,buffer.end()));
         }
         else {
-            buffer += curdat->_Data;
+            std::copy(curdat->_Data.begin(),curdat->_Data.end(),
+                      std::inserter<std::vector<char>>(buffer,buffer.end()));
         }
         curdat = curdat->nextcondata();
     } while (curdat != endblock);
 
-    return buffer.length(); //not include termination
+    return buffer.size(); //not include termination
 }
 
 int netplus::con::searchValue(con::condata* startblock, con::condata** findblock,
