@@ -59,7 +59,7 @@ namespace netplus {
 
             virtual int          fd()=0;
 
-	    virtual socket&	 operator=(int sock)=0;
+            virtual socket&      operator=(int sock)=0;
 
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;

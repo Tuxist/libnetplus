@@ -37,11 +37,11 @@
 #endif
 
 const char* netplus::con::condata::getData(){
-  return _Data.c_str();
+  return _Data.data();
 }
 
 unsigned long netplus::con::condata::getDataLength(){
-  return _Data.length();
+  return _Data.size();
 }
 
 netplus::con::condata *netplus::con::condata::nextcondata(){
@@ -49,7 +49,7 @@ netplus::con::condata *netplus::con::condata::nextcondata(){
 }
 
 netplus::con::condata::condata(const char*data,unsigned long datasize)  {
-    _Data.insert(0,data,datasize);
+    std::copy(data,data+datasize,std::inserter(_Data,_Data.begin()));
     _nextConnectionData=nullptr;
 }
 
@@ -91,8 +91,8 @@ void netplus::con::cleanSendData(){
    _SendDataLength=0;
 }
 
-netplus::con::condata *netplus::con::resizeSendQueue(size_t size){
-    return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
+netplus::con::condata *netplus::con::resizeSendQueue(size_t spos,size_t size){
+    return _resizeQueue(&_SendDataFirst,&_SendDataLast,spos,_SendDataLength,size);
 }
 
 netplus::con::condata* netplus::con::getSendFirst(){
@@ -132,8 +132,8 @@ void netplus::con::cleanRecvData(){
 }
 
 
-netplus::con::condata *netplus::con::resizeRecvQueue(size_t size){
-    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
+netplus::con::condata *netplus::con::resizeRecvQueue(size_t spos,size_t size){
+    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,spos,_ReadDataLength,size);
 }
 
 netplus::con::condata *netplus::con::getRecvFirst(){
@@ -159,12 +159,18 @@ bool netplus::con::issending() {
 
 
 netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
-                                                               size_t &qsize,size_t size){
+                                                    size_t spos,size_t &qsize,size_t size){
     NetException exception;
     if (!*firstdata || size > qsize) {
         exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
         throw exception;
     }
+
+    if(spos!=0){
+        std::copy((*firstdata)->_Data.begin()+spos, (*firstdata)->_Data.end() - spos,(*firstdata)->_Data.begin());
+        (*firstdata)->_Data.resize(spos);
+    }
+
 #ifdef DEBUG
     unsigned long delsize = 0, presize = qsize;
 #endif
@@ -188,10 +194,8 @@ HAVEDATA:
 #ifdef DEBUG
         delsize += size;
 #endif
-        std::string buffer;
-        buffer = (*firstdata)->_Data.substr(size, (*firstdata)->_Data.length() - size);
-        (*firstdata)->_Data = buffer;
-        *firstdata = (*firstdata);
+        std::copy((*firstdata)->_Data.begin()+size, (*firstdata)->_Data.end() - size,(*firstdata)->_Data.begin());
+        (*firstdata)->_Data.resize(size);
     }
 #ifdef DEBUG
     std ::cout << " delsize: " << delsize
