@@ -254,7 +254,7 @@ namespace netplus {
             throw exp;
         }
         ResponseEvent(wcon);
-        wcon->resizeSendQueue(0,sended);
+        wcon->resizeSendQueue(sended);
     };
 
 

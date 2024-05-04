@@ -91,8 +91,8 @@ void netplus::con::cleanSendData(){
    _SendDataLength=0;
 }
 
-netplus::con::condata *netplus::con::resizeSendQueue(size_t spos,size_t size){
-    return _resizeQueue(&_SendDataFirst,&_SendDataLast,spos,_SendDataLength,size);
+netplus::con::condata *netplus::con::resizeSendQueue(size_t size){
+    return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
 }
 
 netplus::con::condata* netplus::con::getSendFirst(){
@@ -132,8 +132,8 @@ void netplus::con::cleanRecvData(){
 }
 
 
-netplus::con::condata *netplus::con::resizeRecvQueue(size_t spos,size_t size){
-    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,spos,_ReadDataLength,size);
+netplus::con::condata *netplus::con::resizeRecvQueue(size_t size){
+    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
 }
 
 netplus::con::condata *netplus::con::getRecvFirst(){
@@ -158,17 +158,11 @@ bool netplus::con::issending() {
 }
 
 
-netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,
-                                                    size_t spos,size_t &qsize,size_t size){
+netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,size_t &qsize,size_t size){
     NetException exception;
     if (!*firstdata || size > qsize) {
         exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
         throw exception;
-    }
-
-    if(spos!=0){
-        std::copy((*firstdata)->_Data.begin()+spos, (*firstdata)->_Data.end() - spos,(*firstdata)->_Data.begin());
-        (*firstdata)->_Data.resize(spos);
     }
 
 #ifdef DEBUG
@@ -176,7 +170,7 @@ netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata**
 #endif
     qsize -= size;
 HAVEDATA:
-    if ((*firstdata)->getDataLength()<=size) {
+    if ((*firstdata)->getDataLength()<= size) {
 #ifdef DEBUG
         delsize += (*firstdata)->getDataLength();;
 #endif
