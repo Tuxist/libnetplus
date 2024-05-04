@@ -25,16 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <memory>
+
 #include "socket.h"
 #include "connection.h"
 
-
-
 #pragma once
 
-struct poll_event;
-
 namespace netplus {
+        class poll;
         class eventapi {
         public:
 
@@ -53,11 +52,16 @@ namespace netplus {
             virtual void WriteEventHandler(int pos)=0;
             virtual void CloseEventHandler(int pos)=0;
 
+
             /*HTTP API Events*/
             virtual void RequestEvent(con *curcon)=0;
             virtual void ResponseEvent(con *curcon)=0;
             virtual void ConnectEvent(con *curcon)=0;
             virtual void DisconnectEvent(con *curcon)=0;
+
+            /*memory allocation*/
+            virtual void CreateConnetion(con **curon)=0;
+            virtual void deleteConnetion(con *curon)=0;
 
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
@@ -65,33 +69,7 @@ namespace netplus {
             virtual void sendReady(con *curcon,bool ready)=0;
         };
 
-        class poll : public eventapi{
-        public:
-            poll(socket* serversocket);
-            virtual ~poll();
-            const char *getpolltype();
-            void initEventHandler();
-            int pollState(int pos);
-            unsigned int waitEventHandler();
-            void ConnectEventHandler(int pos);
-            void ReadEventHandler(int pos);
-            void WriteEventHandler(int pos);
-            void CloseEventHandler(int pos);
-
-            bool trylockCon(int pos);
-            void unlockConlock(int pos);
-
-            void sendReady(con *curcon,bool ready);
-        private:
-            void                  closecon(int pos);
-            void                 _setpollEvents(con *curcon,int events);
-            int                  _pollFD;
-            struct  poll_event  *_Events;
-            socket              *_ServerSocket;
-            int                  _EventNums;
-        };
-
-        class event : public poll {
+        class event {
         public:
             event(socket *serversocket);
             void runEventloop();
@@ -103,8 +81,13 @@ namespace netplus {
             virtual void ConnectEvent(con *curcon);
             virtual void DisconnectEvent(con *curcon);
 
+            virtual void CreateConnetion(con **curon);
+            virtual void deleteConnetion(con *curon);
+
             virtual ~event();
             static bool _Run;
             static bool _Restart;
+        private:
+            std::shared_ptr<poll> _Poll;
         };
 };

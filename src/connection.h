@@ -50,6 +50,7 @@ namespace netplus {
                 friend class    con;
             };
             
+            con();
             con(eventapi *event);
             ~con();
             
@@ -86,7 +87,6 @@ namespace netplus {
 
             std::atomic<bool> closecon;
         protected:
-            con();
             /*Incomming Data*/
             size_t   _ReadDataLength;
             /*Outgoing Data*/

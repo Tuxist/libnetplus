@@ -167,5 +167,7 @@ namespace netplus {
         };
 
         class quick : public socket{
+        public:
+            quick&       operator=(int socket);
         };
 };
