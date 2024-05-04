@@ -33,7 +33,6 @@
 #pragma once
 
 namespace netplus {
-        class poll;
         class eventapi {
         public:
 
@@ -78,6 +77,6 @@ namespace netplus {
             static bool _Run;
             static bool _Restart;
         private:
-            std::shared_ptr<poll> _Poll;
+            std::shared_ptr<eventapi> _Poll;
         };
 };

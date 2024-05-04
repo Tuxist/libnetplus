@@ -390,27 +390,27 @@ namespace netplus {
     event::~event() {
     }
 
-    void RequestEvent(con *curcon){
+    void event::RequestEvent(con *curcon){
         //dummy
     };
 
-    void ResponseEvent(con *curcon){
+    void event::ResponseEvent(con *curcon){
         //dummy
     };
 
-    void ConnectEvent(con *curcon){
+    void event::ConnectEvent(con *curcon){
         //dummy
     };
 
-    void DisconnectEvent(con *curcon){
+    void event::DisconnectEvent(con *curcon){
         //dummy
     };
 
-    void CreateConnetion(con **curcon){
+    void event::CreateConnetion(con **curcon){
         *curcon=new con();
     };
 
-    void deleteConnetion(con *curcon){
+    void event::deleteConnetion(con *curcon){
         delete curcon;
     };
 
