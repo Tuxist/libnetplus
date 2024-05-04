@@ -63,11 +63,12 @@ __attribute__((__packed__))
 ;
 
 namespace netplus {
-    class poll : public event,public eventapi{
+    class poll : public pollapi{
     public:
-        poll(socket* serversocket) : event(serversocket){
+        poll(socket* serversocket,eventapi *eapi) : pollapi(eapi){
             _ServerSocket = serversocket;
             _EventNums=0;
+            _evtapi=eapi;
         };
 
         ~poll() {
@@ -142,8 +143,8 @@ namespace netplus {
                     throw except;
                 }
 
-                DisconnectEvent(delcon);
-                deleteConnetion(delcon);
+                _evtapi->DisconnectEvent(delcon);
+                _evtapi->deleteConnetion(delcon);
                 _Events[i].data.ptr=nullptr;
             }
 
@@ -160,7 +161,7 @@ namespace netplus {
         void ConnectEventHandler(int pos)  {
             NetException exception;
             con *ccon;
-            CreateConnetion(&ccon);
+            _evtapi->CreateConnetion(&ccon,this);
             try {
                 if(_ServerSocket->_Type==sockettype::TCP){
                     ccon->csock=std::make_shared<tcp>();
@@ -198,7 +199,7 @@ namespace netplus {
                 delete ccon;
                 throw e;
             }
-            ConnectEvent(ccon);
+            _evtapi->ConnectEvent(ccon);
         };
 
         void ReadEventHandler(int pos) {
@@ -224,7 +225,7 @@ namespace netplus {
             }
 
             rcon->addRecvQueue(buf, rcvsize);
-            RequestEvent(rcon);
+            _evtapi->RequestEvent(rcon);
         };
 
         void WriteEventHandler(int pos) {
@@ -255,7 +256,7 @@ namespace netplus {
                 exp[NetException::Error] << "WriteEvent: max tries Reached!";
                 throw exp;
             }
-            ResponseEvent(wcon);
+            _evtapi->ResponseEvent(wcon);
             wcon->resizeSendQueue(sended);
         };
 
@@ -303,14 +304,15 @@ namespace netplus {
 
     class WorkerArgs {
     public:
-        WorkerArgs(std::shared_ptr<event> eventptr ,std::shared_ptr<eventapi> eventapiptr) : eventptr(eventptr) , eventapiptr(eventapiptr){
-            eventptr=nullptr;
+        WorkerArgs(pollapi *ptr){
+            pollptr=ptr;
             pos=nullptr;
             sync=nullptr;
             tid=-1;
         };
 
-        WorkerArgs(const WorkerArgs &args) : eventptr(args.eventptr) , eventapiptr(args.eventapiptr){
+        WorkerArgs(const WorkerArgs &args){
+            pollptr=args.pollptr;
             pos=args.pos;
             sync=args.sync;
             tid=args.tid;
@@ -320,8 +322,7 @@ namespace netplus {
         };
 
 
-        std::shared_ptr<event>     eventptr;
-        std::shared_ptr<eventapi>  eventapiptr;
+        pollapi                   *pollptr;
         std::atomic<int>          *pos;
         std::mutex                *sync;
         int                        tid;
@@ -330,26 +331,26 @@ namespace netplus {
     class EventWorker {
     public:
         EventWorker(void* args) {
-            std::shared_ptr<eventapi> eventptr=((WorkerArgs*)args)->eventapiptr;
+            pollapi *pollptr=((WorkerArgs*)args)->pollptr;
             while (event::_Run) {
                 ((WorkerArgs*)args)->sync->lock();
                 int i =((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].load();
                 try {
-                    int state = eventptr->pollState(i);
+                    int state = pollptr->pollState(i);
                     switch (state) {
-                        case poll::EventHandlerStatus::EVCON:
-                            eventptr->ConnectEventHandler(i);
+                        case pollapi::EventHandlerStatus::EVCON:
+                            pollptr->ConnectEventHandler(i);
                             break;
                         default:
                             break;
                     }
                     try{
                         switch (state) {
-                            case poll::EventHandlerStatus::EVIN:
-                                eventptr->ReadEventHandler(i);
+                            case pollapi::EventHandlerStatus::EVIN:
+                                pollptr->ReadEventHandler(i);
                                 break;
-                            case poll::EventHandlerStatus::EVOUT:
-                                eventptr->WriteEventHandler(i);
+                            case pollapi::EventHandlerStatus::EVOUT:
+                                pollptr->WriteEventHandler(i);
                                 break;
                             default:
                                 NetException excep;
@@ -358,7 +359,7 @@ namespace netplus {
                         }
                     }catch(NetException& e){
                         if(e.getErrorType()!=NetException::Note){
-                            eventptr->CloseEventHandler(i);
+                            pollptr->CloseEventHandler(i);
                             throw e;
                         }
                     }
@@ -375,8 +376,30 @@ namespace netplus {
 
     };
 
-    eventapi::~eventapi() {
-    }
+    void eventapi::RequestEvent(con *curcon){
+        //dummy
+    };
+
+    void eventapi::ResponseEvent(con *curcon){
+        //dummy
+    };
+
+    void eventapi::ConnectEvent(con *curcon){
+        //dummy
+    };
+
+    void eventapi::DisconnectEvent(con *curcon){
+        //dummy
+    };
+
+    void eventapi::CreateConnetion(con **curcon,pollapi *pabi){
+        *curcon=new con(pabi);
+    };
+
+    void eventapi::deleteConnetion(con *curcon){
+        delete curcon;
+    };
+
 
     event::event(socket* serversocket) {
         if (!serversocket) {
@@ -384,35 +407,12 @@ namespace netplus {
             exp[NetException::Critical] << "server socket empty!";
             throw exp;
         }
-        _Poll = std::make_shared<poll>(serversocket);
+        _Poll = new poll(serversocket,this);
     }
 
     event::~event() {
+        delete _Poll;
     }
-
-    void event::RequestEvent(con *curcon){
-        //dummy
-    };
-
-    void event::ResponseEvent(con *curcon){
-        //dummy
-    };
-
-    void event::ConnectEvent(con *curcon){
-        //dummy
-    };
-
-    void event::DisconnectEvent(con *curcon){
-        //dummy
-    };
-
-    void event::CreateConnetion(con **curcon){
-        *curcon=new con();
-    };
-
-    void event::deleteConnetion(con *curcon){
-        delete curcon;
-    };
 
     void event::runEventloop() {
         size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
@@ -426,7 +426,7 @@ namespace netplus {
 
         for (size_t i = 0; i < thrs; i++) {
            try {
-                WorkerArgs args(std::make_shared<event>(*this),_Poll);
+                WorkerArgs args(_Poll);
                 args.tid=i;
                 args.pos=running;
                 args.pos[i].store(-1);

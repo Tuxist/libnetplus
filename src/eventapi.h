@@ -35,10 +35,29 @@
 namespace netplus {
         class eventapi {
         public:
+             /*HTTP API Events*/
+            virtual void RequestEvent(con *curcon);
+            virtual void ResponseEvent(con *curcon);
+            virtual void ConnectEvent(con *curcon);
+            virtual void DisconnectEvent(con *curcon);
+
+            /*memory allocation*/
+            virtual void CreateConnetion(con **curon,pollapi *pabi);
+            virtual void deleteConnetion(con *curon);
+        };
+
+        class pollapi {
+        public:
+            pollapi(eventapi *eapi){
+                _evtapi=eapi;
+            };
+
+            virtual ~pollapi(){
+
+            };
 
             enum EventHandlerStatus{EVIN=0,EVOUT=1,EVUP=2,EVERR=3,EVWAIT=4,EVCON=5};
 
-            virtual ~eventapi();
             virtual void initEventHandler()=0;
             virtual const char *getpolltype()=0;
             /*pollstate*/
@@ -55,28 +74,20 @@ namespace netplus {
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
             virtual void sendReady(con *curcon,bool ready)=0;
+        protected:
+            eventapi *_evtapi;
         };
 
-        class event {
+        class event : public eventapi{
         public:
             event(socket *serversocket);
             void runEventloop();
             static void *WorkerThread(void *wrkevent);
 
-            /*HTTP API Events*/
-            virtual void RequestEvent(con *curcon);
-            virtual void ResponseEvent(con *curcon);
-            virtual void ConnectEvent(con *curcon);
-            virtual void DisconnectEvent(con *curcon);
-
-            /*memory allocation*/
-            virtual void CreateConnetion(con **curon);
-            virtual void deleteConnetion(con *curon);
-
             virtual ~event();
             static bool _Run;
             static bool _Restart;
         private:
-            std::shared_ptr<eventapi> _Poll;
+            pollapi *_Poll;
         };
 };

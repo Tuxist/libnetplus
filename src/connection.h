@@ -32,7 +32,7 @@
 #pragma once
 
 namespace netplus {
-        class eventapi;
+        class pollapi;
         
         class con {
         public:
@@ -50,8 +50,7 @@ namespace netplus {
                 friend class    con;
             };
             
-            con();
-            con(eventapi *event);
+            con(pollapi *event);
             ~con();
             
             /*Cache helper functions*/
@@ -87,6 +86,7 @@ namespace netplus {
 
             std::atomic<bool> closecon;
         protected:
+            con();
             /*Incomming Data*/
             size_t   _ReadDataLength;
             /*Outgoing Data*/
@@ -102,7 +102,7 @@ namespace netplus {
             /*Outgoing Data*/
             condata  *_SendDataFirst;
             condata  *_SendDataLast;
-            eventapi *_eventapi;
+            pollapi  *_pollapi;
             
             /*if pollout*/
             bool      _sending;
