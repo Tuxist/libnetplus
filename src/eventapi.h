@@ -52,17 +52,6 @@ namespace netplus {
             virtual void WriteEventHandler(int pos)=0;
             virtual void CloseEventHandler(int pos)=0;
 
-
-            /*HTTP API Events*/
-            virtual void RequestEvent(con *curcon)=0;
-            virtual void ResponseEvent(con *curcon)=0;
-            virtual void ConnectEvent(con *curcon)=0;
-            virtual void DisconnectEvent(con *curcon)=0;
-
-            /*memory allocation*/
-            virtual void CreateConnetion(con **curon)=0;
-            virtual void deleteConnetion(con *curon)=0;
-
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
@@ -75,12 +64,13 @@ namespace netplus {
             void runEventloop();
             static void *WorkerThread(void *wrkevent);
 
-            /*Events*/
+            /*HTTP API Events*/
             virtual void RequestEvent(con *curcon);
             virtual void ResponseEvent(con *curcon);
             virtual void ConnectEvent(con *curcon);
             virtual void DisconnectEvent(con *curcon);
 
+            /*memory allocation*/
             virtual void CreateConnetion(con **curon);
             virtual void deleteConnetion(con *curon);
 

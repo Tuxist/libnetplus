@@ -63,9 +63,9 @@ __attribute__((__packed__))
 ;
 
 namespace netplus {
-    class poll : public eventapi{
+    class poll : public event,public eventapi{
     public:
-        poll(socket* serversocket) {
+        poll(socket* serversocket) : event(serversocket){
             _ServerSocket = serversocket;
             _EventNums=0;
         };
@@ -291,29 +291,6 @@ namespace netplus {
                 }
         };
 
-        void RequestEvent(con *curcon){
-
-        };
-
-        void ResponseEvent(con *curcon){
-
-        };
-
-        void ConnectEvent(con *curcon){
-        };
-
-        void DisconnectEvent(con *curcon){
-
-        };
-
-        void CreateConnetion(con **curon){
-            *curon=new con();
-        }
-
-        void deleteConnetion(con *curon){
-            delete curon;
-        }
-
     private:
         int                  _pollFD;
         struct  poll_event  *_Events;
@@ -413,22 +390,29 @@ namespace netplus {
     event::~event() {
     }
 
+    void RequestEvent(con *curcon){
+        //dummy
+    };
 
-    void event::RequestEvent(con* curcon) {
-        return;
-    }
+    void ResponseEvent(con *curcon){
+        //dummy
+    };
 
-    void event::ResponseEvent(con* curcon) {
-        return;
-    }
+    void ConnectEvent(con *curcon){
+        //dummy
+    };
 
-    void event::ConnectEvent(con* curcon) {
-        return;
-    }
+    void DisconnectEvent(con *curcon){
+        //dummy
+    };
 
-    void event::DisconnectEvent(con* curcon) {
-        return;
-    }
+    void CreateConnetion(con **curcon){
+        *curcon=new con();
+    };
+
+    void deleteConnetion(con *curcon){
+        delete curcon;
+    };
 
     void event::runEventloop() {
         size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
