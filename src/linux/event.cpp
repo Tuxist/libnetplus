@@ -432,6 +432,7 @@ namespace netplus {
             exp[NetException::Critical] << "server socket empty!";
             throw exp;
         }
+        _Poll=new poll(serversocket,this);
     }
 
     event::~event() {
