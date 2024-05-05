@@ -188,7 +188,7 @@ HAVEDATA:
 #ifdef DEBUG
         delsize += size;
 #endif
-        std::copy((*firstdata)->_Data.begin()+size, (*firstdata)->_Data.end() - size,(*firstdata)->_Data.begin());
+        std::move((*firstdata)->_Data.begin()+size, (*firstdata)->_Data.end() - size,(*firstdata)->_Data.begin());
         (*firstdata)->_Data.resize(size);
     }
 #ifdef DEBUG
