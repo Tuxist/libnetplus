@@ -33,6 +33,8 @@
 #pragma once
 
 namespace netplus {
+        class pollapi;
+
         class eventapi {
         public:
              /*HTTP API Events*/
@@ -42,40 +44,13 @@ namespace netplus {
             virtual void DisconnectEvent(con *curcon);
 
             /*memory allocation*/
-            virtual void CreateConnetion(con **curon,pollapi *pabi);
-            virtual void deleteConnetion(con *curon);
-        };
-
-        class pollapi {
-        public:
-            pollapi(eventapi *eapi){
-                _evtapi=eapi;
-            };
-
-            virtual ~pollapi(){
-
-            };
-
-            enum EventHandlerStatus{EVIN=0,EVOUT=1,EVUP=2,EVERR=3,EVWAIT=4,EVCON=5};
-
-            virtual void initEventHandler()=0;
-            virtual const char *getpolltype()=0;
-            /*pollstate*/
-            virtual int pollState(int pos)=0;
-
-            /*EventHandler*/
-            virtual unsigned int waitEventHandler()=0;
-            virtual void ConnectEventHandler(int pos)=0;
-            virtual void ReadEventHandler(int pos)=0;
-            virtual void WriteEventHandler(int pos)=0;
-            virtual void CloseEventHandler(int pos)=0;
+            virtual void CreateConnetion(con **curon)=0;
+            virtual void deleteConnetion(con *curon)=0;
 
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
             virtual void sendReady(con *curcon,bool ready)=0;
-        protected:
-            eventapi *_evtapi;
         };
 
         class event : public eventapi{
@@ -83,6 +58,7 @@ namespace netplus {
             event(socket *serversocket);
             void runEventloop();
             static void *WorkerThread(void *wrkevent);
+            void sendReady(con *curcon,bool ready);
 
             virtual ~event();
             static bool _Run;

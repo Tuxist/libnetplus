@@ -150,7 +150,7 @@ size_t netplus::con::getRecvLength(){
 
 void netplus::con::sending(bool state) {
     _sending = state;
-    _pollapi->sendReady(this,state);
+    _eventapi->sendReady(this,state);
 }
 
 bool netplus::con::issending() {
@@ -262,18 +262,6 @@ int netplus::con::searchValue(con::condata* startblock, con::condata** findblock
     return -1;
 }
 
-netplus::con::con(pollapi *poll)
-{
-    _ReadDataFirst=nullptr;
-    _ReadDataLast=nullptr;
-    _ReadDataLength=0;
-    _SendDataFirst=nullptr;
-    _SendDataLast=nullptr;
-    _SendDataLength=0;
-    _pollapi=poll;
-    _sending=false;
-}
-
 netplus::con::con(){
     _ReadDataFirst=nullptr;
     _ReadDataLast=nullptr;
@@ -281,7 +269,6 @@ netplus::con::con(){
     _SendDataFirst=nullptr;
     _SendDataLast=nullptr;
     _SendDataLength=0;
-    _pollapi=nullptr;
     _sending=false;
 }
 

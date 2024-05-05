@@ -32,7 +32,7 @@
 #pragma once
 
 namespace netplus {
-        class pollapi;
+        class eventapi;
         
         class con {
         public:
@@ -50,7 +50,7 @@ namespace netplus {
                 friend class    con;
             };
             
-            con(pollapi *event);
+            con(eventapi *event);
             ~con();
             
             /*Cache helper functions*/
@@ -100,9 +100,9 @@ namespace netplus {
             condata *_ReadDataLast;
             
             /*Outgoing Data*/
-            condata  *_SendDataFirst;
-            condata  *_SendDataLast;
-            pollapi  *_pollapi;
+            condata   *_SendDataFirst;
+            condata   *_SendDataLast;
+            eventapi  *_eventapi;
             
             /*if pollout*/
             bool      _sending;

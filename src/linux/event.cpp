@@ -63,6 +63,34 @@ __attribute__((__packed__))
 ;
 
 namespace netplus {
+    class pollapi {
+    public:
+        pollapi(eventapi *eapi){
+            _evtapi=eapi;
+        };
+
+        virtual ~pollapi(){
+
+        };
+
+        enum EventHandlerStatus{EVIN=0,EVOUT=1,EVUP=2,EVERR=3,EVWAIT=4,EVCON=5};
+
+        virtual void initEventHandler()=0;
+        virtual const char *getpolltype()=0;
+        /*pollstate*/
+        virtual int pollState(int pos)=0;
+
+        /*EventHandler*/
+        virtual unsigned int waitEventHandler()=0;
+        virtual void ConnectEventHandler(int pos)=0;
+        virtual void ReadEventHandler(int pos)=0;
+        virtual void WriteEventHandler(int pos)=0;
+        virtual void CloseEventHandler(int pos)=0;
+        virtual void setpollEvents(con* curcon, int events)=0;
+    protected:
+        eventapi *_evtapi;
+    };
+
     class poll : public pollapi{
     public:
         poll(socket* serversocket,eventapi *eapi) : pollapi(eapi){
@@ -161,7 +189,7 @@ namespace netplus {
         void ConnectEventHandler(int pos)  {
             NetException exception;
             con *ccon;
-            _evtapi->CreateConnetion(&ccon,this);
+            _evtapi->CreateConnetion(&ccon);
             try {
                 if(_ServerSocket->_Type==sockettype::TCP){
                     ccon->csock=std::make_shared<tcp>();
@@ -269,18 +297,7 @@ namespace netplus {
             }
         };
 
-        /*Connection Ready to send Data*/
-        void sendReady(con* curcon, bool ready) {
-            if (ready) {
-                _setpollEvents(curcon, EPOLLIN | EPOLLOUT);
-            }
-            else {
-                _setpollEvents(curcon, EPOLLIN);
-            }
-        };
-
-
-        void _setpollEvents(con* curcon, int events) {
+        void setpollEvents(con* curcon, int events) {
             NetException except;
             struct poll_event setevent { 0 };
             setevent.events = events;
@@ -392,14 +409,22 @@ namespace netplus {
         //dummy
     };
 
-    void eventapi::CreateConnetion(con **curcon,pollapi *pabi){
-        *curcon=new con(pabi);
+    void eventapi::CreateConnetion(con **curcon){
+        *curcon=new con(this);
     };
 
     void eventapi::deleteConnetion(con *curcon){
         delete curcon;
     };
 
+    /*Connection Ready to send Data*/
+    void event::sendReady(con* curcon, bool ready) {
+        if (ready) {
+            _Poll->setpollEvents(curcon, EPOLLIN | EPOLLOUT);
+        } else {
+            _Poll->setpollEvents(curcon, EPOLLIN);
+        }
+    };
 
     event::event(socket* serversocket) {
         if (!serversocket) {
@@ -407,11 +432,9 @@ namespace netplus {
             exp[NetException::Critical] << "server socket empty!";
             throw exp;
         }
-        _Poll = new poll(serversocket,this);
     }
 
     event::~event() {
-        delete _Poll;
     }
 
     void event::runEventloop() {
