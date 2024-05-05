@@ -272,6 +272,10 @@ netplus::con::con(){
     _sending=false;
 }
 
+netplus::con::con(eventapi *eapi) : con(){
+    _eventapi=eapi;
+}
+
 netplus::con::~con(){
     delete _ReadDataFirst;
     delete _SendDataFirst;
