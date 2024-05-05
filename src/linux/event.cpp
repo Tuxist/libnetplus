@@ -235,20 +235,12 @@ namespace netplus {
             con *rcon = (con*)_Events[pos].data.ptr;
             char buf[BLOCKSIZE];
             size_t rcvsize = 0, tries=0;
-            for(;;){
-                rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
-                if(rcvsize!=0 || tries > 5)
-                    break;
-
-                ++tries;
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(5*tries));
-            }
+            rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
             if(rcvsize==0){
                 NetException exp;
-                exp[NetException::Error] << "ReadEvent: no data recived!";
+                exp[NetException::Note] << "ReadEvent: no data recived!";
                 throw exp;
             }
 
@@ -267,21 +259,13 @@ namespace netplus {
 
             size_t sended=0,tries=0;
 
-            for(;;){
-                sended = _ServerSocket->sendData(wcon->csock,
+            sended = _ServerSocket->sendData(wcon->csock,
                                                  (void*)wcon->getSendFirst()->getData(),
                                                  wcon->getSendFirst()->getDataLength());
 
-                if(sended!=0 || tries > 5)
-                    break;
-
-                ++tries;
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(5*tries));
-            };
             if(sended==0){
                 NetException exp;
-                exp[NetException::Error] << "WriteEvent: max tries Reached!";
+                exp[NetException::Note] << "WriteEvent: cannot send data!";
                 throw exp;
             }
             _evtapi->ResponseEvent(wcon);
