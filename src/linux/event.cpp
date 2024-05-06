@@ -271,7 +271,6 @@ namespace netplus {
         };
 
         void setpollEvents(con* curcon, int events) {
-             std::cout << "test" << std::endl;
             NetException except;
             struct poll_event setevent { 0 };
             setevent.events = events;

@@ -250,14 +250,13 @@ unsigned int netplus::tcp::sendData(std::shared_ptr<socket> csock, void* data, u
                         csock->_SocketPtrSize
                      );
     if(rval<0){
-        if(errno==EAGAIN){
-            return 0;
-        }
-
+        int etype=NetException::Error;
+        if(errno==EAGAIN)
+            etype=NetException::Note;
         char errstr[512];
         strerror_r(errno,errstr,512);
 
-        exception[NetException::Error] << "Socket senddata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
@@ -281,14 +280,15 @@ unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, u
                             &csock->_SocketPtrSize
                          );
     if(recvsize<0){
+        int etype=NetException::Error;
         if(errno==EAGAIN)
-            return 0;
+            etype=NetException::Note;
 
 
         char errstr[512];
         strerror_r(errno,errstr,512);
 
-        exception[NetException::Error] << "Socket recvdata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket recvdata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
@@ -483,13 +483,14 @@ unsigned int netplus::udp::sendData(std::shared_ptr<socket> csock, void* data, u
                         flags
                      );
     if(rval<0){
-        if(errno==EAGAIN){
-            return 0;
-        }
+        int etype=NetException::Error;
+        if(errno==EAGAIN)
+            etype=NetException::Note;
+
         char errstr[512];
         strerror_r(errno,errstr,512);
 
-        exception[NetException::Error] << "Socket senddata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
 
         throw exception;
@@ -510,13 +511,15 @@ unsigned int netplus::udp::recvData(std::shared_ptr<socket> csock, void* data, u
                             flags
                          );
     if(recvsize<0){
-        if(errno==EAGAIN){
-            return 0;
-        }
+        int etype=NetException::Error;
+
+        if(errno==EAGAIN)
+            etype=NetException::Note;
+
         char errstr[512];
         strerror_r(errno,errstr,512);
 
-        exception[NetException::Error] << "Socket recvData failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket recvData failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
@@ -872,33 +875,48 @@ int netplus::ssl::fd(){
 int netplus::ssl::getMaxconnections(){
     return _Maxconnections;
 }
-     
+
 unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,unsigned long size){
     NetException exception;
+
+    int sslsize=mbedtls_ssl_get_max_out_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
+
+    size = sslsize < size ?  sslsize : size;
 
     int rval=::mbedtls_ssl_write(&((SSLPrivate*)csock->_Extension)->_SSLCtx,(unsigned char*)data,size);
     if(rval<0){
         char err_str[256];
         mbedtls_strerror(rval, err_str, 256);
-        if(errno==EAGAIN){
-            return 0;
-        }
-        exception[NetException::Error] << "Socket senddata failed on Socket: " << err_str;
+
+        int etype=NetException::Error;
+
+        if(rval==MBEDTLS_ERR_SSL_WANT_WRITE || rval== MBEDTLS_ERR_SSL_CLIENT_RECONNECT)
+            etype=NetException::Note;
+
+        exception[etype] << "Socket senddata failed on Socket: " << err_str;
         throw exception;
     }
-    return rval;}
+    return rval;
+}
 
 unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,unsigned long size){
     NetException exception;
+
+    int sslsize=mbedtls_ssl_get_max_in_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
+
+    size = sslsize < size ?  sslsize : size;
 
     int recvsize=::mbedtls_ssl_read(&((SSLPrivate*)csock->_Extension)->_SSLCtx,(unsigned char*)data,size);
     if(recvsize<0){
         char err_str[256];
         mbedtls_strerror(recvsize, err_str, 256);
-        if(errno==EAGAIN){
-            return 0;
-        }
-        exception[NetException::Error] << "Socket recvdata failed on Socket: " << err_str;
+
+        int etype=NetException::Error;
+
+        if(recvsize==MBEDTLS_ERR_SSL_WANT_READ || recvsize==MBEDTLS_ERR_SSL_CLIENT_RECONNECT)
+            etype=NetException::Note;
+
+        exception[etype] << "Socket recvdata failed on Socket: " << err_str;
         throw exception;
     }
     return recvsize;
