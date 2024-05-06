@@ -149,8 +149,8 @@ size_t netplus::con::getRecvLength(){
 }
 
 void netplus::con::sending(bool state) {
-    _sending.store(state);
     _eventapi->sendReady(this,state);
+    _sending.store(state);
 }
 
 bool netplus::con::issending() {
