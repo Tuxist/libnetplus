@@ -234,7 +234,7 @@ namespace netplus {
             NetException exception;
             con *rcon = (con*)_Events[pos].data.ptr;
             char buf[BLOCKSIZE];
-            size_t rcvsize = 0, tries=0;
+            size_t rcvsize = 0;
 
             rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
@@ -257,7 +257,7 @@ namespace netplus {
                 return;
             }
 
-            size_t sended=0,tries=0;
+            size_t sended=0;
 
             sended = _ServerSocket->sendData(wcon->csock,
                                                  (void*)wcon->getSendFirst()->getData(),

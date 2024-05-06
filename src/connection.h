@@ -105,7 +105,7 @@ namespace netplus {
             eventapi  *_eventapi;
             
             /*if pollout*/
-            bool      _sending;
+            std::atomic<bool> _sending;
 
             friend class poll;
         };
