@@ -224,7 +224,7 @@ namespace netplus {
                     throw exception;
                 }
             } catch (NetException& e) {
-                delete ccon;
+                _evtapi->deleteConnetion(ccon);
                 throw e;
             }
             _evtapi->ConnectEvent(ccon);
