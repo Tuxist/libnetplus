@@ -289,8 +289,17 @@ namespace netplus {
             if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,
                 curcon->csock->fd(), (struct epoll_event*)&setevent) < 0) {
                 except[NetException::Error] << "_setEpollEvents: can change socket!";
-            throw except;
-                }
+                throw except;
+            }
+        };
+
+        /*Connection Ready to send Data*/
+        void sendReady(con* curcon, bool ready) {
+            if (ready) {
+                setpollEvents(curcon, EPOLLIN | EPOLLOUT);
+            } else {
+                setpollEvents(curcon, EPOLLIN);
+            }
         };
 
     private:
@@ -399,15 +408,6 @@ namespace netplus {
 
     void eventapi::deleteConnetion(con *curcon){
         delete curcon;
-    };
-
-    /*Connection Ready to send Data*/
-    void event::sendReady(con* curcon, bool ready) {
-        if (ready) {
-            _Poll->setpollEvents(curcon, EPOLLIN | EPOLLOUT);
-        } else {
-            _Poll->setpollEvents(curcon, EPOLLIN);
-        }
     };
 
     event::event(socket* serversocket) {
