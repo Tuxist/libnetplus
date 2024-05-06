@@ -131,12 +131,12 @@ namespace netplus {
             if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,
                 _ServerSocket->fd(),(struct epoll_event*)&setevent) < 0) {
                 exception[NetException::Critical] << "initEventHandler: can't create epoll";
-            throw exception;
-                }
+                throw exception;
+            }
 
-                _Events = new poll_event[_ServerSocket->getMaxconnections()];
-                for (int i = 0; i < _ServerSocket->getMaxconnections(); ++i)
-                    _Events[i].data.ptr = nullptr;
+            _Events = new poll_event[_ServerSocket->getMaxconnections()];
+            for (int i = 0; i < _ServerSocket->getMaxconnections(); ++i)
+                _Events[i].data.ptr = nullptr;
         };
 
         int pollState(int pos){
@@ -147,7 +147,7 @@ namespace netplus {
             if(!pcon)
                 return EventHandlerStatus::EVCON;
 
-            if(pcon->issending())
+            if( _Events[pos].events & EPOLLOUT )
                 return EventHandlerStatus::EVOUT;
 
             return EventHandlerStatus::EVIN;
@@ -238,12 +238,6 @@ namespace netplus {
 
             rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
-            if(rcvsize==0){
-                NetException exp;
-                exp[NetException::Note] << "ReadEvent: no data recived!";
-                throw exp;
-            }
-
             rcon->addRecvQueue(buf, rcvsize);
             _evtapi->RequestEvent(rcon);
         };
@@ -263,11 +257,6 @@ namespace netplus {
                                                  (void*)wcon->getSendFirst()->getData(),
                                                  wcon->getSendFirst()->getDataLength());
 
-            if(sended==0){
-                NetException exp;
-                exp[NetException::Note] << "WriteEvent: cannot send data!";
-                throw exp;
-            }
             _evtapi->ResponseEvent(wcon);
             wcon->resizeSendQueue(sended);
         };
@@ -282,6 +271,7 @@ namespace netplus {
         };
 
         void setpollEvents(con* curcon, int events) {
+             std::cout << "test" << std::endl;
             NetException except;
             struct poll_event setevent { 0 };
             setevent.events = events;
@@ -290,15 +280,6 @@ namespace netplus {
                 curcon->csock->fd(), (struct epoll_event*)&setevent) < 0) {
                 except[NetException::Error] << "_setEpollEvents: can change socket!";
                 throw except;
-            }
-        };
-
-        /*Connection Ready to send Data*/
-        void sendReady(con* curcon, bool ready) {
-            if (ready) {
-                setpollEvents(curcon, EPOLLIN | EPOLLOUT);
-            } else {
-                setpollEvents(curcon, EPOLLIN);
             }
         };
 
@@ -421,6 +402,15 @@ namespace netplus {
 
     event::~event() {
     }
+
+    /*Connection Ready to send Data*/
+    void event::sendReady(con* curcon, bool ready) {
+        if (ready) {
+            _Poll->setpollEvents(curcon, EPOLLIN | EPOLLOUT);
+        } else {
+            _Poll->setpollEvents(curcon, EPOLLIN);
+        }
+    };
 
     void event::runEventloop() {
         size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);

@@ -150,13 +150,7 @@ size_t netplus::con::getRecvLength(){
 
 void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
-    _sending.store(state);
 }
-
-bool netplus::con::issending() {
-    return _sending.load();
-}
-
 
 netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,size_t &qsize,size_t size){
     NetException exception;
@@ -269,7 +263,6 @@ netplus::con::con(){
     _SendDataFirst=nullptr;
     _SendDataLast=nullptr;
     _SendDataLength=0;
-    _sending=false;
 }
 
 netplus::con::con(eventapi *eapi) : con(){

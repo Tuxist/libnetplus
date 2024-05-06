@@ -82,7 +82,6 @@ namespace netplus {
 
             /*set sending state*/
             void    sending(bool state);
-            bool    issending();
 
             std::atomic<bool> closecon;
         protected:
@@ -103,9 +102,6 @@ namespace netplus {
             condata   *_SendDataFirst;
             condata   *_SendDataLast;
             eventapi  *_eventapi;
-            
-            /*if pollout*/
-            std::atomic<bool> _sending;
 
             friend class poll;
         };

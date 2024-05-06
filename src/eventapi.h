@@ -50,13 +50,14 @@ namespace netplus {
             /*Connection Ready to send Data
              * DANGEROUS to burnout your cpu
              *only use this if know what you do!*/
-            void sendReady(con *curcon,bool ready);
+            virtual void sendReady(con *curcon,bool ready)=0;
         };
 
         class event : public eventapi{
         public:
             event(socket *serversocket);
             void runEventloop();
+            void sendReady(con* curcon, bool ready);
             static void *WorkerThread(void *wrkevent);
 
             virtual ~event();
