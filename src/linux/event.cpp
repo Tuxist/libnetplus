@@ -257,7 +257,7 @@ namespace netplus {
 
             _evtapi->ResponseEvent(wcon);
             std::move(wcon->SendData.begin()+sended,wcon->SendData.end(),wcon->SendData.begin());
-            wcon->SendData.resize(sended);
+            wcon->SendData.resize(wcon->SendData.size()-sended);
         };
 
 

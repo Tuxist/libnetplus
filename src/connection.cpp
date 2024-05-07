@@ -46,42 +46,6 @@
   * Use it everyday with good health.
   */
 
-// void netplus::con::addSendQueue(const char*data,unsigned long datasize){
-//     std::copy(data,data+datasize,std::inserter<std::vector<char>>(SendData,SendData.end()));
-// }
-//
-// void netplus::con::cleanSendData(){
-//    SendData.clear();
-// }
-//
-// void netplus::con::resizeSendQueue(size_t size){
-//     std::move(SendData.begin()+size,SendData.end(),std::inserter<std::vector<char>>(SendData,SendData.begin()));
-//     SendData.resize(SendData.size()-size);
-// }
-//
-//
-// size_t netplus::con::getSendSize(){
-//   return SendData.size();
-// }
-//
-// void netplus::con::addRecvQueue(const char *data,unsigned long datasize){
-//     std::copy(data,data+datasize,std::inserter<std::vector<char>>(RecvData,RecvData.end()));
-// }
-//
-// void netplus::con::cleanRecvData(){
-//     RecvData.clear();
-// }
-//
-//
-// void netplus::con::resizeRecvQueue(size_t size){
-//     std::move(RecvData.begin()+size,RecvData.end(),std::inserter<std::vector<char>>(RecvData,RecvData.begin()));
-//     RecvData.resize(RecvData.size()-size);
-// }
-//
-// size_t netplus::con::getRecvSize(){
-//   return RecvData.size();
-// }
-
 void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
 }
