@@ -253,11 +253,19 @@ namespace netplus {
 
             size_t sended=0;
 
-            sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),BLOCKSIZE);
+            size_t ssize = BLOCKSIZE < wcon->SendData.size() ? BLOCKSIZE : wcon->SendData.size();
+
+            sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
 
             _evtapi->ResponseEvent(wcon);
             std::move(wcon->SendData.begin()+sended,wcon->SendData.end(),wcon->SendData.begin());
-            wcon->SendData.resize(wcon->SendData.size()-sended);
+
+            size_t newsize = (wcon->SendData.size()-sended);
+
+            if(newsize==0)
+                wcon->SendData.clear();
+            else
+                wcon->SendData.resize(newsize);
         };
 
 
