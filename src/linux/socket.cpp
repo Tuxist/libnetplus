@@ -890,7 +890,7 @@ unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,uns
 
         int etype=NetException::Error;
 
-        if(rval==MBEDTLS_ERR_SSL_WANT_WRITE || rval== MBEDTLS_ERR_SSL_CLIENT_RECONNECT)
+        if(rval==MBEDTLS_ERR_SSL_WANT_WRITE || rval== MBEDTLS_ERR_SSL_WANT_READ)
             etype=NetException::Note;
 
         exception[etype] << "Socket senddata failed on Socket: " << err_str;
@@ -913,7 +913,7 @@ unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,uns
 
         int etype=NetException::Error;
 
-        if(recvsize==MBEDTLS_ERR_SSL_WANT_READ || recvsize==MBEDTLS_ERR_SSL_CLIENT_RECONNECT)
+        if(recvsize==MBEDTLS_ERR_SSL_WANT_WRITE || recvsize==MBEDTLS_ERR_SSL_WANT_READ)
             etype=NetException::Note;
 
         exception[etype] << "Socket recvdata failed on Socket: " << err_str;

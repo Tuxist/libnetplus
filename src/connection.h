@@ -36,46 +36,12 @@ namespace netplus {
         
         class con {
         public:
-            class condata {
-            public:
-                const char*      getData();
-                unsigned long    getDataLength();
-                condata         *nextcondata();
-            protected:
-                condata(const char*data, unsigned long datasize);
-                ~condata();
-            private:
-                std::vector<char> _Data;
-                condata          *_nextConnectionData;
-                friend class    con;
-            };
             
             con(eventapi *event);
             ~con();
             
-            /*Cache helper functions*/
-            
-            int             copyValue(condata* startblock, size_t startpos,
-                                      condata* endblock, size_t endpos, std::vector<char> &buffer);
-            int             searchValue(condata* startblock, condata** findblock,
-                                        const char* keyword);
-            int             searchValue(condata* startblock, condata** findblock,
-                                        const char* keyword,unsigned long keylen);
-            
-            condata *addSendQueue(const char *data,unsigned long datasize);
-            condata *resizeSendQueue(size_t size);
-            void     cleanSendData();
-            condata *getSendFirst();
-            condata *getSendLast();
-            size_t   getSendLength();
-            
-            /*Get Data funtions Recv Queue*/
-            condata *addRecvQueue(const char *data,unsigned long datasize);
-            condata *resizeRecvQueue(size_t size);
-            void     cleanRecvData();
-            condata *getRecvFirst();
-            condata *getRecvLast();
-            size_t   getRecvLength();
+            std::vector<char> RecvData;
+            std::vector<char> SendData;
             
             /*clientsocket*/
             std::shared_ptr<socket> csock;
@@ -86,21 +52,8 @@ namespace netplus {
             std::atomic<bool> closecon;
         protected:
             con();
-            /*Incomming Data*/
-            size_t   _ReadDataLength;
-            /*Outgoing Data*/
-            size_t   _SendDataLength;
         private:
-            condata *_resizeQueue(condata **firstdata, condata **lastdata,
-                                  size_t &qsize,size_t size);
-            
-            /*Incomming Data*/
-            condata *_ReadDataFirst;
-            condata *_ReadDataLast;
-            
-            /*Outgoing Data*/
-            condata   *_SendDataFirst;
-            condata   *_SendDataLast;
+
             eventapi  *_eventapi;
 
             friend class poll;

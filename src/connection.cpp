@@ -36,27 +36,6 @@
 #include <iostream>
 #endif
 
-const char* netplus::con::condata::getData(){
-  return _Data.data();
-}
-
-unsigned long netplus::con::condata::getDataLength(){
-  return _Data.size();
-}
-
-netplus::con::condata *netplus::con::condata::nextcondata(){
-  return _nextConnectionData;
-}
-
-netplus::con::condata::condata(const char*data,unsigned long datasize)  {
-    std::copy(data,data+datasize,std::inserter(_Data,_Data.begin()));
-    _nextConnectionData=nullptr;
-}
-
-netplus::con::condata::~condata() {
-    delete _nextConnectionData;
-}
-
 /** \brief a method to add Data to Sendqueue
   * \param data an const char* to add to sendqueue
   * \param datasize an size_t to set datasize
@@ -67,202 +46,46 @@ netplus::con::condata::~condata() {
   * Use it everyday with good health.
   */
 
-netplus::con::condata *netplus::con::addSendQueue(const char*data,unsigned long datasize){
-    if(datasize<=0){
-        NetException excp;
-        excp[NetException::Error] << "addSendQueue wrong datasize";
-        throw excp;
-    }
-    if(!_SendDataFirst){
-        _SendDataFirst= new con::condata(data,datasize);
-        _SendDataLast=_SendDataFirst;
-    }else{
-        _SendDataLast->_nextConnectionData=new con::condata(data,datasize);
-        _SendDataLast=_SendDataLast->_nextConnectionData;
-    }
-    _SendDataLength+=datasize;
-    return _SendDataLast;
-}
-
-void netplus::con::cleanSendData(){
-   delete _SendDataFirst;
-   _SendDataFirst=nullptr;
-   _SendDataLast=nullptr;
-   _SendDataLength=0;
-}
-
-netplus::con::condata *netplus::con::resizeSendQueue(size_t size){
-    return _resizeQueue(&_SendDataFirst,&_SendDataLast,_SendDataLength,size);
-}
-
-netplus::con::condata* netplus::con::getSendFirst(){
-    return _SendDataFirst;
-}
-
-netplus::con::condata * netplus::con::getSendLast(){
-    return _SendDataLast;
-}
-
-size_t netplus::con::getSendLength(){
-  return _SendDataLength;
-}
-
-netplus::con::condata *netplus::con::addRecvQueue(const char *data,unsigned long datasize){
-    if(datasize<=0){
-        NetException excp;
-        excp[NetException::Error] << "addRecvQueue wrong datasize:" << datasize;
-        throw excp;
-    }
-    if(!_ReadDataFirst){
-        _ReadDataFirst= new con::condata(data,datasize);
-        _ReadDataLast=_ReadDataFirst;
-    }else{
-        _ReadDataLast->_nextConnectionData=new con::condata(data,datasize);
-        _ReadDataLast=_ReadDataLast->_nextConnectionData;
-    }
-    _ReadDataLength+=datasize;
-    return _ReadDataLast;
-}
-
-void netplus::con::cleanRecvData(){
-   delete _ReadDataFirst;
-  _ReadDataFirst=nullptr;
-  _ReadDataLast=nullptr;
-  _ReadDataLength=0;
-}
-
-
-netplus::con::condata *netplus::con::resizeRecvQueue(size_t size){
-    return _resizeQueue(&_ReadDataFirst,&_ReadDataLast,_ReadDataLength,size);
-}
-
-netplus::con::condata *netplus::con::getRecvFirst(){
-  return _ReadDataFirst;
-}
-
-netplus::con::condata * netplus::con::getRecvLast(){
-    return _ReadDataLast;
-}
-
-size_t netplus::con::getRecvLength(){
-  return _ReadDataLength;
-}
+// void netplus::con::addSendQueue(const char*data,unsigned long datasize){
+//     std::copy(data,data+datasize,std::inserter<std::vector<char>>(SendData,SendData.end()));
+// }
+//
+// void netplus::con::cleanSendData(){
+//    SendData.clear();
+// }
+//
+// void netplus::con::resizeSendQueue(size_t size){
+//     std::move(SendData.begin()+size,SendData.end(),std::inserter<std::vector<char>>(SendData,SendData.begin()));
+//     SendData.resize(SendData.size()-size);
+// }
+//
+//
+// size_t netplus::con::getSendSize(){
+//   return SendData.size();
+// }
+//
+// void netplus::con::addRecvQueue(const char *data,unsigned long datasize){
+//     std::copy(data,data+datasize,std::inserter<std::vector<char>>(RecvData,RecvData.end()));
+// }
+//
+// void netplus::con::cleanRecvData(){
+//     RecvData.clear();
+// }
+//
+//
+// void netplus::con::resizeRecvQueue(size_t size){
+//     std::move(RecvData.begin()+size,RecvData.end(),std::inserter<std::vector<char>>(RecvData,RecvData.begin()));
+//     RecvData.resize(RecvData.size()-size);
+// }
+//
+// size_t netplus::con::getRecvSize(){
+//   return RecvData.size();
+// }
 
 void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
 }
-
-netplus::con::condata *netplus::con::_resizeQueue(condata** firstdata, condata** lastdata,size_t &qsize,size_t size){
-    NetException exception;
-    if (!*firstdata || size > qsize) {
-        exception[NetException::Error] << "_resizeQueue wrong datasize or ConnectionData";
-        throw exception;
-    }
-
-#ifdef DEBUG
-    unsigned long delsize = 0, presize = qsize;
-#endif
-    qsize -= size;
-HAVEDATA:
-    if ((*firstdata)->getDataLength()<= size) {
-#ifdef DEBUG
-        delsize += (*firstdata)->getDataLength();;
-#endif
-        size -= (*firstdata)->getDataLength();
-        condata* newdat = (*firstdata)->_nextConnectionData;
-        (*firstdata)->_nextConnectionData = nullptr;
-        if (*firstdata == *lastdata)
-            (*lastdata) = nullptr;
-        delete* firstdata;
-        *firstdata = newdat;
-        if (*firstdata)
-            goto HAVEDATA;
-    }
-    if (size != 0) {
-#ifdef DEBUG
-        delsize += size;
-#endif
-        std::move((*firstdata)->_Data.begin()+size, (*firstdata)->_Data.end() - size,(*firstdata)->_Data.begin());
-        (*firstdata)->_Data.resize(size);
-    }
-#ifdef DEBUG
-    std ::cout << " delsize: " << delsize
-        << " Calculated Blocksize: " << (presize - delsize)
-        << " Planned size: " << qsize
-        << std::endl;
-    if ((presize - delsize) != qsize) {
-        exception[NetException::Critical] << "_resizeQueue: Calculated wrong size";
-        throw exception;
-    }
-#endif
-
-    return *firstdata;
-}
-                                                               
-int netplus::con::copyValue(con::condata* startblock, size_t startpos,
-    con::condata* endblock, size_t endpos, std::vector<char>& buffer) {
-
-    con::condata* curdat = startblock;
-
-    do {
-        if (curdat == startblock && curdat == endblock) {
-            std::copy(curdat->_Data.begin()+startpos, curdat->_Data.begin()+endpos,
-                      std::inserter<std::vector<char>>(buffer,buffer.end()));
-            break;
-        }
-        else if (curdat == startblock) {
-            std::copy(curdat->_Data.begin()+startpos,curdat->_Data.end(),
-                      std::inserter<std::vector<char>>(buffer,buffer.end()));
-        }
-        else if (curdat == endblock) {
-            std::copy(curdat->_Data.begin(),curdat->_Data.begin()+endpos,
-                      std::inserter<std::vector<char>>(buffer,buffer.end()));
-        }
-        else {
-            std::copy(curdat->_Data.begin(),curdat->_Data.end(),
-                      std::inserter<std::vector<char>>(buffer,buffer.end()));
-        }
-        curdat = curdat->nextcondata();
-    } while (curdat != endblock);
-
-    return buffer.size(); //not include termination
-}
-
-int netplus::con::searchValue(con::condata* startblock, con::condata** findblock,
-                                       const char* keyword){
-    return searchValue(startblock, findblock, keyword,strlen(keyword));
-}
-                                       
-int netplus::con::searchValue(con::condata* startblock, con::condata** findblock,
-                                       const char* keyword,unsigned long keylen){
-   unsigned long fpos=0,fcurpos=0;
-    for(con::condata *curdat=startblock; curdat; curdat=curdat->nextcondata()){
-        for(unsigned long pos=0; pos<curdat->getDataLength(); ++pos){
-            if(keyword[fcurpos]==curdat->_Data[pos]){
-                if(fcurpos==0){
-                    fpos=pos;
-                    *findblock=curdat;
-                }
-                fcurpos++;
-            }else{
-                fcurpos=0;
-                fpos=0;
-                *findblock=nullptr;
-            }
-            if(fcurpos==keylen)
-                return fpos;
-        }
-    }
-    return -1;
-}
-
 netplus::con::con(){
-    _ReadDataFirst=nullptr;
-    _ReadDataLast=nullptr;
-    _ReadDataLength=0;
-    _SendDataFirst=nullptr;
-    _SendDataLast=nullptr;
-    _SendDataLength=0;
 }
 
 netplus::con::con(eventapi *eapi) : con(){
@@ -270,7 +93,5 @@ netplus::con::con(eventapi *eapi) : con(){
 }
 
 netplus::con::~con(){
-    delete _ReadDataFirst;
-    delete _SendDataFirst;
 }
 

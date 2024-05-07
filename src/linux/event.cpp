@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
 #include <iostream>
-#include <vector>
+#include <algorithm>
 #include <chrono>
 #include <thread>
 #include <unistd.h>
@@ -238,7 +238,7 @@ namespace netplus {
 
             rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
-            rcon->addRecvQueue(buf, rcvsize);
+            std::copy(buf,buf+rcvsize,std::inserter<std::vector<char>>(rcon->RecvData,rcon->RecvData.end()));
             _evtapi->RequestEvent(rcon);
         };
 
@@ -246,19 +246,18 @@ namespace netplus {
 
             con *wcon = (con*)_Events[pos].data.ptr;
 
-            if(!wcon->getSendFirst()){
+            if(wcon->SendData.size()==0){
                 wcon->sending(false);
                 return;
             }
 
             size_t sended=0;
 
-            sended = _ServerSocket->sendData(wcon->csock,
-                                                 (void*)wcon->getSendFirst()->getData(),
-                                                 wcon->getSendFirst()->getDataLength());
+            sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),BLOCKSIZE);
 
             _evtapi->ResponseEvent(wcon);
-            wcon->resizeSendQueue(sended);
+            std::move(wcon->SendData.begin()+sended,wcon->SendData.end(),wcon->SendData.begin());
+            wcon->SendData.resize(sended);
         };
 
 
