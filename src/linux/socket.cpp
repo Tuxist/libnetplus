@@ -46,7 +46,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 
 #define SSL_DEBUG_LEVEL 0
-#undef MBEDTLS_SSL_RECORD_SIZE_LIMIT
 
 extern "C" {
     #include <mbedtls/net_sockets.h>
@@ -913,7 +912,9 @@ unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,uns
 
         int etype=NetException::Error;
 
-        if(recvsize==MBEDTLS_ERR_SSL_WANT_WRITE || recvsize==MBEDTLS_ERR_SSL_WANT_READ)
+        if( recvsize==MBEDTLS_ERR_SSL_WANT_WRITE ||
+            recvsize==MBEDTLS_ERR_SSL_WANT_READ ||
+            recvsize==MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET )
             etype=NetException::Note;
 
         exception[etype] << "Socket recvdata failed on Socket: " << err_str;
@@ -935,10 +936,7 @@ void netplus::ssl::connect(std::shared_ptr<socket> csock){
 
     mbedtls_ssl_set_hostname(&((SSLPrivate*)csock->_Extension)->_SSLCtx, _Addr );
 
-    /* Set the certificates as trusted for this session. */
-    mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)csock->_Extension)->_SSLConf, &((SSLPrivate*)csock->_Extension)->_Cacert, nullptr);
-
-    // memcpy(&csock->_Extension)->_Cacert ,&((SSLPrivate*)_Extension)->_Cacert,sizeof(((SSLPrivate*)_Extension)->_Cacert));
+    // memcpy(&((SSLPrivate*)csock->_Extension)->_Cacert ,&((SSLPrivate*)_Extension)->_Cacert, sizeof(((SSLPrivate*)_Extension)->_Cacert) );
 
     const char *pers = "libnet_ssl_server";
 
@@ -954,7 +952,7 @@ void netplus::ssl::connect(std::shared_ptr<socket> csock){
 
     mbedtls_ssl_conf_authmode(&((SSLPrivate*)csock->_Extension)->_SSLConf, MBEDTLS_SSL_VERIFY_OPTIONAL );
 
-    mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)csock->_Extension)->_SSLConf, &((SSLPrivate*)csock->_Extension)->_Cacert, nullptr);
+    mbedtls_ssl_conf_ca_chain(&((SSLPrivate*)csock->_Extension)->_SSLConf, &((SSLPrivate*)_Extension)->_Cacert, nullptr);
 
     mbedtls_ssl_conf_rng(&((SSLPrivate*)csock->_Extension)->_SSLConf, mbedtls_ctr_drbg_random, &((SSLPrivate*)csock->_Extension)->_SSLCTR_DRBG);
 
