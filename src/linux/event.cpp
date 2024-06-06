@@ -355,10 +355,15 @@ namespace netplus {
                                 throw excep;
                         }
                     }catch(NetException& e){
-                        if(e.getErrorType()!=NetException::Note){
-                            pollptr->CloseEventHandler(i);
-                            throw e;
+                        switch(e.getErrorType()){
+                            case NetException::Critical:
+                                throw e;
+                            case NetException::Note:
+                                break;
+                            default:
+                                pollptr->CloseEventHandler(i);
                         }
+                        std::cerr << e.what() << std::endl;
                     }
                 } catch (NetException& e) {
                     if (e.getErrorType() == NetException::Critical) {
@@ -449,7 +454,6 @@ namespace netplus {
         int wait=-1;
         while (event::_Run) {
             try {
-
                 if(wait<0){
                     for(size_t i = 0; i< thrs; ++i){
                         while(running[i].load()!=-1);
