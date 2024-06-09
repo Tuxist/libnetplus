@@ -242,7 +242,8 @@ namespace netplus {
 
             rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
-            std::copy(buf,buf+rcvsize,std::inserter<std::vector<char>>(rcon->RecvData,rcon->RecvData.end()));
+            rcon->addRecvData(buf,rcvsize);
+
             _evtapi->RequestEvent(rcon);
             rcon->lasteventime = time(nullptr);
         };
@@ -251,26 +252,26 @@ namespace netplus {
 
             con *wcon = (con*)_Events[pos].data.ptr;
 
-            if(wcon->SendData.size()==0){
+
+            std::vector<char> buf;
+
+            if(buf.empty()){
                 wcon->sending(false);
                 return;
             }
 
-            size_t sended=0;
+            wcon->getSendData(buf);
 
-            size_t ssize = BLOCKSIZE < wcon->SendData.size() ? BLOCKSIZE : wcon->SendData.size();
+            size_t ssize = BLOCKSIZE < buf.size() ? BLOCKSIZE : buf.size();
 
-            sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
+            size_t sended = _ServerSocket->sendData(wcon->csock,buf.data(),ssize);
 
             _evtapi->ResponseEvent(wcon);
-            std::move(wcon->SendData.begin()+sended,wcon->SendData.end(),wcon->SendData.begin());
 
-            size_t newsize = (wcon->SendData.size()-sended);
-
-            if(newsize==0)
-                wcon->SendData.clear();
+            if(sended==0)
+                wcon->clearSendData();
             else
-                wcon->SendData.resize(newsize);
+                wcon->ResizeSendData(sended);
 
             wcon->lasteventime = time(nullptr);
         };
