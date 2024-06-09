@@ -55,7 +55,7 @@ namespace netplus {
 
         class event : public eventapi{
         public:
-            event(socket *serversocket);
+            event(socket *serversocket,int timeout = 60);
             void runEventloop();
             void sendReady(con* curcon, bool ready);
             static void *WorkerThread(void *wrkevent);

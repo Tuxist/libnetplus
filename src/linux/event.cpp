@@ -65,7 +65,7 @@ __attribute__((__packed__))
 namespace netplus {
     class pollapi {
     public:
-        pollapi(eventapi *eapi){
+        pollapi(eventapi *eapi,int timeout){
             _evtapi=eapi;
         };
 
@@ -86,6 +86,7 @@ namespace netplus {
         virtual void ReadEventHandler(int pos)=0;
         virtual void WriteEventHandler(int pos)=0;
         virtual void CloseEventHandler(int pos)=0;
+        virtual void TimeoutEventHandler(int pos)=0;
         virtual void setpollEvents(con* curcon, int events)=0;
     protected:
         eventapi *_evtapi;
@@ -93,10 +94,11 @@ namespace netplus {
 
     class poll : public pollapi{
     public:
-        poll(socket* serversocket,eventapi *eapi) : pollapi(eapi){
+        poll(socket* serversocket,eventapi *eapi,int timeout) : pollapi(eapi,timeout){
             _ServerSocket = serversocket;
             _EventNums=0;
             _evtapi=eapi;
+            _Timeout=timeout;
         };
 
         ~poll() {
@@ -206,6 +208,7 @@ namespace netplus {
                     throw exception;
 
                 }
+
                 ccon->closecon=false;
                 std::string ip;
                 ccon->csock->getAddress(ip);
@@ -223,6 +226,7 @@ namespace netplus {
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                     throw exception;
                 }
+                ccon->lasteventime = time(nullptr);
             } catch (NetException& e) {
                 _evtapi->deleteConnetion(ccon);
                 throw e;
@@ -240,6 +244,7 @@ namespace netplus {
 
             std::copy(buf,buf+rcvsize,std::inserter<std::vector<char>>(rcon->RecvData,rcon->RecvData.end()));
             _evtapi->RequestEvent(rcon);
+            rcon->lasteventime = time(nullptr);
         };
 
         void WriteEventHandler(int pos) {
@@ -266,6 +271,8 @@ namespace netplus {
                 wcon->SendData.clear();
             else
                 wcon->SendData.resize(newsize);
+
+            wcon->lasteventime = time(nullptr);
         };
 
 
@@ -276,6 +283,19 @@ namespace netplus {
                 ((con*)_Events[pos].data.ptr)->closecon.compare_exchange_strong(expected,true);
             }
         };
+
+        void TimeoutEventHandler(int pos){
+             con *tcon = (con*)_Events[pos].data.ptr;
+
+             bool expected=false;
+
+             if(tcon){
+                if(time(nullptr) - tcon->lasteventime > _Timeout ){
+                    tcon->closecon.compare_exchange_strong(expected,true);
+                }
+             }
+
+        }
 
         void setpollEvents(con* curcon, int events) {
             NetException except;
@@ -294,6 +314,7 @@ namespace netplus {
         struct  poll_event  *_Events;
         socket              *_ServerSocket;
         int                  _EventNums;
+        int                  _Timeout;
     };
 
     bool event::_Run = true;
@@ -350,9 +371,8 @@ namespace netplus {
                                 pollptr->WriteEventHandler(i);
                                 break;
                             default:
-                                NetException excep;
-                                excep[NetException::Note] << "Eventworker: nothing todo close connection";
-                                throw excep;
+                                pollptr->TimeoutEventHandler(i);
+                                break;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
@@ -402,13 +422,13 @@ namespace netplus {
         delete curcon;
     };
 
-    event::event(socket* serversocket) {
+    event::event(socket* serversocket,int timeout) {
         if (!serversocket) {
             NetException exp;
             exp[NetException::Critical] << "server socket empty!";
             throw exp;
         }
-        _Poll=new poll(serversocket,this);
+        _Poll=new poll(serversocket,this,timeout);
     }
 
     event::~event() {

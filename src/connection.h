@@ -52,6 +52,7 @@ namespace netplus {
             std::atomic<bool> closecon;
         protected:
             con();
+            int lasteventime;
         private:
 
             eventapi  *_eventapi;

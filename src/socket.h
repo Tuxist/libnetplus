@@ -79,7 +79,7 @@ namespace netplus {
                 int sockopts);
             ~tcp();
             
-            void  	  accept(std::shared_ptr<socket> csock);
+            void          accept(std::shared_ptr<socket> csock);
             void          bind();
             void          listen();
             int           fd();
