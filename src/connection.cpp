@@ -107,6 +107,17 @@ void netplus::con::clearRecvData(){
 
 }
 
+size_t netplus::con::RecvSize(){
+   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
+
+   ssize_t s = RecvData.size();
+
+   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
+
+   return s;
+}
+
+
 void netplus::con::addSendData(const std::vector<char>& data){
    while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
 
@@ -152,3 +163,12 @@ void netplus::con::clearSendData(){
    std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
 }
 
+size_t netplus::con::SendSize(){
+   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
+
+   size_t s =SendData.size();
+
+   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
+
+   return s;
+}

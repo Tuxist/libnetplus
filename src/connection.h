@@ -47,6 +47,7 @@ namespace netplus {
 
             void ResizeRecvData(size_t size);
             void clearRecvData();
+            size_t RecvSize();
 
             void addSendData(const std::vector<char> &data);
             void addSendData(const char *data,size_t len);
@@ -55,7 +56,8 @@ namespace netplus {
 
             void ResizeSendData(size_t size);
             void clearSendData();
-            
+            size_t SendSize();
+
             /*clientsocket*/
             std::shared_ptr<socket> csock;
 
