@@ -296,8 +296,8 @@ namespace netplus {
                 char errstr[255];
 
                 if (ect < 0) {
-                    char *msg=strerror_r(errno,errstr,255);
-                    except[NetException::Error] << "CloseEvent can't delete Connection: " << msg;
+                    strerror_r(errno,errstr,255);
+                    except[NetException::Error] << "CloseEvent can't delete Connection: " << errstr;
                     throw except;
                 }
 
