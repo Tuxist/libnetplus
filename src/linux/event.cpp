@@ -318,11 +318,16 @@ namespace netplus {
         void TimeoutEventHandler(int pos){
              con *tcon = (con*)_Events[pos].data.ptr;
 
-             if(tcon){
-                if(time(nullptr) - tcon->lasteventime > _Timeout ){
-                    CloseEventHandler(pos);
-                }
-             }
+            if( !tcon || !tcon->lock())
+                return;
+
+            if(time(nullptr) - tcon->lasteventime > _Timeout ){
+                tcon->unlock();
+                CloseEventHandler(pos);
+                return;
+            }
+
+            tcon->unlock();
         }
 
         void setpollEvents(con* curcon, int events) {
