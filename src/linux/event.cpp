@@ -63,6 +63,9 @@ __attribute__((__packed__))
 ;
 
 namespace netplus {
+
+    std::atomic<bool> elock(false);
+
     class pollapi {
     public:
         pollapi(eventapi *eapi,int timeout){
@@ -255,12 +258,12 @@ namespace netplus {
 
             std::vector<char> buf;
 
+            wcon->getSendData(buf);
+
             if(buf.empty()){
                 wcon->sending(false);
                 return;
             }
-
-            wcon->getSendData(buf);
 
             size_t ssize = BLOCKSIZE < buf.size() ? BLOCKSIZE : buf.size();
 
@@ -321,50 +324,42 @@ namespace netplus {
     bool event::_Run = true;
     bool event::_Restart = false;
 
-    class WorkerArgs {
+    class EventWorkerArgs{
     public:
-        WorkerArgs(pollapi *ptr){
-            pollptr=ptr;
-            pos=nullptr;
-            sync=nullptr;
-            tid=-1;
-        };
+        EventWorkerArgs(){
+        }
 
-        WorkerArgs(const WorkerArgs &args){
-            pollptr=args.pollptr;
-            pos=args.pos;
-            sync=args.sync;
-            tid=args.tid;
-        };
+        EventWorkerArgs(const EventWorkerArgs &eargs){
+            poll=eargs.poll;
+            wait.store(eargs.wait);
+        }
 
-        ~WorkerArgs(){
-        };
-
-
-        pollapi                   *pollptr;
-        std::atomic<int>          *pos;
-        std::mutex                *sync;
-        int                        tid;
+        pollapi            *poll;
+        std::atomic<int>    wait;
     };
 
     class EventWorker {
     public:
         EventWorker(void* args) {
-            pollapi *pollptr=((WorkerArgs*)args)->pollptr;
+
+            EventWorkerArgs *wargs=(EventWorkerArgs*)args;
+            pollapi *pollptr=wargs->poll;
+
             while (event::_Run) {
-                ((WorkerArgs*)args)->sync->lock();
-                int i =((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].load();
+                int i;
+
+                while ( ( i = wargs->wait.load() ) ==-1 ){
+                    usleep(1000);
+                }
+
                 try {
+CONNECTED:
                     int state = pollptr->pollState(i);
-                    switch (state) {
-                        case pollapi::EventHandlerStatus::EVCON:
-                            pollptr->ConnectEventHandler(i);
-                            break;
-                        default:
-                            break;
-                    }
                     try{
                         switch (state) {
+                            case pollapi::EventHandlerStatus::EVCON:
+                                pollptr->ConnectEventHandler(i);
+                                goto CONNECTED;
                             case pollapi::EventHandlerStatus::EVIN:
                                 pollptr->ReadEventHandler(i);
                                 break;
@@ -393,7 +388,8 @@ namespace netplus {
                         std::cerr << e.what() << std::endl;
                     }
                 }
-                ((WorkerArgs*)args)->pos[((WorkerArgs*)args)->tid].store(-1);
+
+                std::atomic_store_explicit(&wargs->wait, -1, std::memory_order_release);
             }
         }
 
@@ -445,68 +441,47 @@ namespace netplus {
     };
 
     void event::runEventloop() {
-        size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
+        size_t thrs = 1; //sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
         _Poll->initEventHandler();
     MAINWORKERLOOP:
-        std::vector<WorkerArgs>  targs;
         std::vector<std::thread> thpool;
-        std::atomic<int>        *running;
-        running = new std::atomic<int> [thrs];
+
+        EventWorkerArgs** eargs;
+
+        eargs = new EventWorkerArgs* [thrs];
 
         for (size_t i = 0; i < thrs; i++) {
            try {
-                WorkerArgs args(_Poll);
-                args.tid=i;
-                args.pos=running;
-                args.pos[i].store(-1);
-                args.sync=new std::mutex;
-                args.sync->lock();
-                targs.push_back(args);
-                thpool.push_back(std::thread([targs,i](){
-                   new EventWorker((void*)&targs[i]);
+                eargs[i]=new EventWorkerArgs;
+                eargs[i]->wait.store(-1);
+                eargs[i]->poll=_Poll;
+
+                thpool.push_back(std::thread([eargs,i](){
+                    std::cout << eargs[i]->wait.load() << std::endl;
+                   new EventWorker(eargs[i]);
                 }));
-           }
-           catch (NetException& e) {
+           } catch (NetException& e) {
                throw e;
            }
         }
 
-        int wait=-1;
-        while (event::_Run) {
-            try {
-                if(wait<0){
-                    for(size_t i = 0; i< thrs; ++i){
-                        while(running[i].load()!=-1);
-                    }
-                    wait=(_Poll->waitEventHandler()-1);
+        int wfd=-1;
+
+        while(event::_Run){
+
+            for (size_t i = 0; i < thrs; ++i) {
+
+                if(wfd<0){
+                    wfd=(_Poll->waitEventHandler()-1);
                 }
 
                 for(size_t started=0; started<thrs; started++){
-                    int expected=-1;
-                    if(wait<0)
+                    if(wfd<0)
                         break;
-                    if(running[started].compare_exchange_strong(expected,wait)){
-                        targs[started].sync->unlock();
-                        --wait;
+                    if( std::atomic_exchange_explicit(&eargs[started]->wait,wfd,  std::memory_order_acquire) ){
+                        --wfd;
                     }
-                }
-
-            }catch(NetException &e){
-                switch(e.getErrorType()){
-                    case NetException::Note:
-                        std::cout << e.what() << std::endl;
-                        break;
-                    case NetException::Warning:
-                        std::cout << e.what() << std::endl;
-                        break;
-                    case NetException::Error:
-                        std::cerr << e.what() << std::endl;
-                        break;
-                    default:
-                        std::cerr << e.what() << std::endl;
-                        event::_Run=false;
-                        break;
                 }
             }
         }
@@ -515,11 +490,11 @@ namespace netplus {
             thd->join();
         }
 
-        for(size_t i = 0; i < thrs; i++){
-            delete[] targs[i].sync;
+        for (size_t i = 0; i < thrs; i++) {
+            delete eargs[i];
         }
 
-        delete[] running;
+        delete[] eargs;
 
         if (event::_Restart) {
             event::_Restart = false;

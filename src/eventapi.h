@@ -33,6 +33,7 @@
 #pragma once
 
 namespace netplus {
+        class EventWorker;
         class pollapi;
 
         class eventapi {
@@ -65,5 +66,6 @@ namespace netplus {
             static bool _Restart;
         private:
             pollapi *_Poll;
+            friend class EventWorker;
         };
 };

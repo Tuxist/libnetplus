@@ -62,6 +62,7 @@ netplus::con::~con(){
 }
 
 void netplus::con::addRecvData(const std::vector<char>& data){
+
    while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
 
    std::copy(data.begin(),data.end(),std::inserter<std::vector<char>>(RecvData,RecvData.end()));

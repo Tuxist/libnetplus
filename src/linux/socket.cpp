@@ -47,6 +47,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SSL_DEBUG_LEVEL 0
 
+#ifdef _GNU_SOURCE
+#undef _GNU_SOURCE
+#endif
+
 extern "C" {
     #include <mbedtls/net_sockets.h>
     #include <mbedtls/ssl.h>
@@ -216,7 +220,11 @@ void netplus::tcp::accept(std::shared_ptr<socket> csock){
     socklen_t myaddrlen=sizeof(myaddr);
     *csock=::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
-        exception[NetException::Error] << "Can't accept on Socket";
+
+        char errstr[512];
+        strerror_r(errno,errstr,512);
+
+        exception[NetException::Error] << "Can't accept on Socket: " << errstr;
         throw exception;
     }
     csock->_SocketPtrSize = myaddrlen;
@@ -280,6 +288,7 @@ unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, u
                          );
     if(recvsize<0){
         int etype=NetException::Error;
+
         if(errno==EAGAIN)
             etype=NetException::Note;
 
@@ -878,7 +887,7 @@ int netplus::ssl::getMaxconnections(){
 unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,unsigned long size){
     NetException exception;
 
-    int sslsize=mbedtls_ssl_get_max_out_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
+    size_t sslsize=mbedtls_ssl_get_max_out_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
 
     size = sslsize < size ?  sslsize : size;
 
@@ -901,7 +910,7 @@ unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,uns
 unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,unsigned long size){
     NetException exception;
 
-    int sslsize=mbedtls_ssl_get_max_in_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
+    size_t sslsize=mbedtls_ssl_get_max_in_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
 
     size = sslsize < size ?  sslsize : size;
 
