@@ -34,29 +34,21 @@
 namespace netplus {
         class eventapi;
         
+        template <typename T>
+        class condata;
+
+        template <> class condata<char> : public std::vector<char>{
+        public:
+            void   resize(size_t size_c);
+            void   append(const char *data,size_t datalen);
+            size_t search(const char *word);
+        };
+
         class con {
         public:
             
             con(eventapi *event);
             ~con();
-            
-            void addRecvData(const std::vector<char> &data );
-            void addRecvData(const char *data,size_t len);
-
-            void getRecvData(std::vector<char> &data );
-
-            void ResizeRecvData(size_t size);
-            void clearRecvData();
-            size_t RecvSize();
-
-            void addSendData(const std::vector<char> &data);
-            void addSendData(const char *data,size_t len);
-
-            void getSendData(std::vector<char> &data );
-
-            void ResizeSendData(size_t size);
-            void clearSendData();
-            size_t SendSize();
 
             /*clientsocket*/
             std::shared_ptr<socket> csock;
@@ -64,19 +56,16 @@ namespace netplus {
             /*set sending state*/
             void    sending(bool state);
 
+            bool    lock();
+            void    unlock();
 
+            condata<char> RecvData;
+            condata<char> SendData;
         protected:
             con();
             int lasteventime;
         private:
-
-            std::atomic<bool> closecon;
-
-            std::vector<char> RecvData;
-            std::atomic<bool> RecvLock;
-
-            std::vector<char> SendData;
-            std::atomic<bool> SendLock;
+            std::atomic<bool> Lock;
             eventapi  *_eventapi;
 
             friend class poll;

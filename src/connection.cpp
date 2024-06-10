@@ -46,12 +46,41 @@
   * Use it everyday with good health.
   */
 
+void netplus::condata<char>::resize(size_t size_c){
+   size_t rs = size();
+
+   std::move(begin()+size_c,end(),begin());
+
+   std::vector<char>::resize(rs-size_c);
+}
+
+void netplus::condata<char>::append(const char* data, size_t datalen){
+   std::copy(data,data+datalen,std::inserter<std::vector<char>>(*this,end()));
+}
+
+size_t netplus::condata<char>::search(const char* word){
+    size_t wsize=strlen(word);
+    for(size_t i=0; i<size(); ++i){
+      for(size_t ii=0; ii<=wsize; ++ii){
+        if(ii==wsize){
+          return i-wsize;
+        }
+        if(at(i)==word[ii]){
+          ++i;
+          continue;
+        }
+        break;
+      }
+    }
+    return std::string::npos;
+}
+
+
 void netplus::con::sending(bool state) {
     _eventapi->sendReady(this,state);
 }
 netplus::con::con(){
-    SendLock.store(false);
-    RecvLock.store(false);
+    Lock.store(false);
 }
 
 netplus::con::con(eventapi *eapi) : con(){
@@ -61,115 +90,10 @@ netplus::con::con(eventapi *eapi) : con(){
 netplus::con::~con(){
 }
 
-void netplus::con::addRecvData(const std::vector<char>& data){
-
-   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-   std::copy(data.begin(),data.end(),std::inserter<std::vector<char>>(RecvData,RecvData.end()));
-
-   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
+bool netplus::con::lock(){
+   return std::atomic_exchange_explicit(&Lock, true, std::memory_order_acquire);
 }
 
-void netplus::con::addRecvData(const char* data, size_t len){
-   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-   std::copy(data,data+len,std::inserter<std::vector<char>>(RecvData,RecvData.end()));
-
-   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
-
-}
-
-void netplus::con::getRecvData(std::vector<char>& data){
-   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-   std::copy(RecvData.begin(),RecvData.end(),std::inserter<std::vector<char>>(data,data.begin()));
-
-   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
-}
-
-void netplus::con::ResizeRecvData(size_t size){
-   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-   size_t rr = RecvData.size();
-
-   std::move(RecvData.begin()+size,RecvData.end(),RecvData.begin());
-
-   RecvData.resize(rr-size);
-
-   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
-}
-
-void netplus::con::clearRecvData(){
-    while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-    RecvData.clear();
-
-    std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
-
-}
-
-size_t netplus::con::RecvSize(){
-   while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
-
-   size_t s = RecvData.size();
-
-   std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
-
-   return s;
-}
-
-
-void netplus::con::addSendData(const std::vector<char>& data){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   std::copy(data.begin(),data.end(),std::inserter<std::vector<char>>(SendData,SendData.end()));
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-}
-
-void netplus::con::addSendData(const char* data, size_t len){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   std::copy(data,data+len,std::inserter<std::vector<char>>(SendData,SendData.end()));
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-}
-
-void netplus::con::getSendData(std::vector<char>& data){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   std::copy(SendData.begin(),SendData.end(),std::inserter<std::vector<char>>(data,data.begin()));
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-}
-
-
-void netplus::con::ResizeSendData(size_t size){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   size_t rs = SendData.size();
-
-   std::move(SendData.begin()+size,SendData.end(),SendData.begin());
-
-   SendData.resize(rs-size);
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-}
-
-void netplus::con::clearSendData(){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   SendData.clear();
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-}
-
-size_t netplus::con::SendSize(){
-   while (std::atomic_exchange_explicit(&SendLock, true, std::memory_order_acquire));
-
-   size_t s =SendData.size();
-
-   std::atomic_store_explicit(&SendLock, false, std::memory_order_release);
-
-   return s;
+void netplus::con::unlock(){
+   std::atomic_store_explicit(&Lock, false, std::memory_order_release);
 }

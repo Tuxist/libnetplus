@@ -64,7 +64,7 @@ __attribute__((__packed__))
 
 namespace netplus {
 
-    std::atomic<bool> elock(false);
+    std::mutex pollstate_mutex;
 
     class pollapi {
     public:
@@ -146,6 +146,8 @@ namespace netplus {
 
         int pollState(int pos){
 
+            const std::lock_guard<std::mutex> lock(pollstate_mutex);
+
             con *pcon = (con*)_Events[pos].data.ptr;
             NetException exception;
 
@@ -159,27 +161,6 @@ namespace netplus {
         }
 
         unsigned int waitEventHandler() {
-            for(int i =0; i<_EventNums; ++i){
-                NetException except;
-                con *delcon = (con*)_Events[i].data.ptr;
-
-                if(!delcon || !delcon->closecon.load())
-                    continue;
-
-                int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,
-                                    delcon->csock->fd(), 0);
-
-                if (ect < 0) {
-                    if(errno==ENOENT)
-                        continue;
-                    except[NetException::Critical] << "CloseEvent can't delete Connection from epoll";
-                    throw except;
-                }
-
-                _evtapi->DisconnectEvent(delcon);
-                _evtapi->deleteConnetion(delcon);
-                _Events[i].data.ptr=nullptr;
-            }
 
             _EventNums = epoll_wait(_pollFD, (struct epoll_event*)_Events, _ServerSocket->getMaxconnections(), -1);
 
@@ -188,10 +169,11 @@ namespace netplus {
                 exception[NetException::Error] << "waitEventHandler: epoll wait failure";
                 throw exception;
             }
-            return _EventNums;
+            return _EventNums-1;
         };
 
         void ConnectEventHandler(int pos)  {
+
             NetException exception;
             con *ccon;
             _evtapi->CreateConnetion(&ccon);
@@ -212,10 +194,11 @@ namespace netplus {
 
                 }
 
-                ccon->closecon=false;
                 std::string ip;
                 ccon->csock->getAddress(ip);
                 std::cout << "Connected: " << ip  << std::endl;
+
+                ccon->lasteventime = time(nullptr);
 
                 struct poll_event setevent { 0 };
                 setevent.events = EPOLLIN;
@@ -229,76 +212,117 @@ namespace netplus {
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                     throw exception;
                 }
-                ccon->lasteventime = time(nullptr);
+
             } catch (NetException& e) {
                 _evtapi->deleteConnetion(ccon);
                 throw e;
             }
+            ccon->lock();
             _evtapi->ConnectEvent(ccon);
+            ccon->unlock();
         };
 
         void ReadEventHandler(int pos) {
-            NetException exception;
+
             con *rcon = (con*)_Events[pos].data.ptr;
-            char buf[BLOCKSIZE];
-            size_t rcvsize = 0;
 
-            rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+            if(!rcon->lock())
+                    return;
 
-            rcon->addRecvData(buf,rcvsize);
+            try{
+                char buf[BLOCKSIZE];
+                size_t rcvsize = 0;
 
-            _evtapi->RequestEvent(rcon);
-            rcon->lasteventime = time(nullptr);
+                rcvsize=_ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+
+                rcon->RecvData.append(buf,rcvsize);
+
+                _evtapi->RequestEvent(rcon);
+                rcon->lasteventime = time(nullptr);
+
+                rcon->unlock();
+            }catch(NetException &e){
+                rcon->unlock();
+                throw e;
+            }
         };
 
         void WriteEventHandler(int pos) {
 
             con *wcon = (con*)_Events[pos].data.ptr;
 
-
-            std::vector<char> buf;
-
-            wcon->getSendData(buf);
-
-            if(buf.empty()){
-                wcon->sending(false);
+            if(!wcon->lock())
                 return;
+
+            try{
+                if(wcon->SendData.size()<0){
+                    wcon->sending(false);
+                    return;
+                }
+
+                size_t ssize = BLOCKSIZE < wcon->SendData.size() ? BLOCKSIZE : wcon->SendData.size();
+
+
+                size_t sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
+
+                _evtapi->ResponseEvent(wcon);
+
+                if(sended>=wcon->SendData.size())
+                    wcon->SendData.clear();
+                else
+                    wcon->SendData.resize(sended);
+
+                wcon->lasteventime = time(nullptr);
+
+                wcon->unlock();
+            }catch(NetException &e){
+                wcon->unlock();
+                throw e;
             }
-
-            size_t ssize = BLOCKSIZE < buf.size() ? BLOCKSIZE : buf.size();
-
-            size_t sended = _ServerSocket->sendData(wcon->csock,buf.data(),ssize);
-
-            _evtapi->ResponseEvent(wcon);
-
-            if(sended==0)
-                wcon->clearSendData();
-            else
-                wcon->ResizeSendData(sended);
-
-            wcon->lasteventime = time(nullptr);
         };
 
 
         void CloseEventHandler(int pos) {
-            bool expected=false;
-            if(_Events[pos].data.ptr){
-                ((con*)_Events[pos].data.ptr)->sending(false);
-                ((con*)_Events[pos].data.ptr)->closecon.compare_exchange_strong(expected,true);
+            con *ccon = (con*)_Events[pos].data.ptr;
+
+            if( !ccon || !ccon->lock())
+                return;
+
+            try{
+
+                int ect = epoll_ctl(_pollFD, EPOLL_CTL_DEL,ccon->csock->fd(), 0);
+
+                NetException except;
+                char errstr[255];
+
+                if (ect < 0) {
+                    char *msg=strerror_r(errno,errstr,255);
+                    except[NetException::Error] << "CloseEvent can't delete Connection: " << msg;
+                    throw except;
+                }
+
+                _evtapi->DisconnectEvent(ccon);
+
+                ccon->unlock();
+
+                _evtapi->deleteConnetion(ccon);
+
+                _Events[pos].data.ptr=nullptr;
+            }catch(NetException &e){
+                if(ccon)
+                    ccon->unlock();
+                throw e;
             }
         };
 
         void TimeoutEventHandler(int pos){
              con *tcon = (con*)_Events[pos].data.ptr;
 
-             bool expected=false;
-
              if(tcon){
                 if(time(nullptr) - tcon->lasteventime > _Timeout ){
-                    tcon->closecon.compare_exchange_strong(expected,true);
+                    CloseEventHandler(pos);
                 }
              }
-
         }
 
         void setpollEvents(con* curcon, int events) {
@@ -458,7 +482,6 @@ CONNECTED:
                 eargs[i]->poll=_Poll;
 
                 thpool.push_back(std::thread([eargs,i](){
-                    std::cout << eargs[i]->wait.load() << std::endl;
                    new EventWorker(eargs[i]);
                 }));
            } catch (NetException& e) {
@@ -473,7 +496,7 @@ CONNECTED:
             for (size_t i = 0; i < thrs; ++i) {
 
                 if(wfd<0){
-                    wfd=(_Poll->waitEventHandler()-1);
+                    wfd=_Poll->waitEventHandler();
                 }
 
                 for(size_t started=0; started<thrs; started++){
