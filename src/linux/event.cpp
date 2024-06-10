@@ -441,7 +441,7 @@ CONNECTED:
     };
 
     void event::runEventloop() {
-        size_t thrs = 1; //sysconf(_SC_NPROCESSORS_ONLN);
+        size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
         _Poll->initEventHandler();
     MAINWORKERLOOP:
