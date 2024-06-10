@@ -255,7 +255,7 @@ namespace netplus {
                 return;
 
             try{
-                if(wcon->SendData.size()<0){
+                if(wcon->SendData.empty()){
                     wcon->sending(false);
                     return;
                 }
