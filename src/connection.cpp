@@ -111,7 +111,7 @@ void netplus::con::clearRecvData(){
 size_t netplus::con::RecvSize(){
    while (std::atomic_exchange_explicit(&RecvLock, true, std::memory_order_acquire));
 
-   ssize_t s = RecvData.size();
+   size_t s = RecvData.size();
 
    std::atomic_store_explicit(&RecvLock, false, std::memory_order_release);
 
