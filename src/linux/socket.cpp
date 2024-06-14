@@ -44,12 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "exception.h"
 #include "socket.h"
+#include "error.h"
 
 #define SSL_DEBUG_LEVEL 0
-
-#ifdef _GNU_SOURCE
-#undef _GNU_SOURCE
-#endif
 
 extern "C" {
     #include <mbedtls/net_sockets.h>
@@ -68,7 +65,6 @@ extern "C" {
 
 netplus::socket::socket(){
     _Socket=-1;
-    _Locked=0;
     _SocketPtr=nullptr;
     _Type=-1;
 }
@@ -86,7 +82,6 @@ void netplus::socket::setnonblocking(){
 }
 
 netplus::tcp::tcp(const netplus::tcp& ctcp){
-    _Locked++;
     _Socket=ctcp._Socket;
     _SocketPtr=ctcp._SocketPtr;
     _SocketPtrSize=ctcp._SocketPtrSize;
@@ -168,13 +163,9 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 }
                                         
 netplus::tcp::~tcp(){
-    if(_Locked==0){
-       if(_Socket>=0)
-          ::close(_Socket);
-       ::free(_SocketPtr);
-    }else{
-        --_Locked;
-    }
+    if(_Socket>=0)
+        ::close(_Socket);
+    ::free(_SocketPtr);
 }
 
 netplus::tcp::tcp() : socket(){
@@ -214,21 +205,23 @@ int netplus::tcp::getMaxconnections(){
     return _Maxconnections;
 }
 
-void netplus::tcp::accept(std::shared_ptr<socket> csock){
+void netplus::tcp::accept(socket *csock){
     NetException exception;
     struct sockaddr myaddr;
     socklen_t myaddrlen=sizeof(myaddr);
     *csock=::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
-
+        int etype=NetException::Error;
+        if(errno==EAGAIN)
+            etype=NetException::Note;
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
-        exception[NetException::Error] << "Can't accept on Socket: " << errstr;
+        exception[etype] << "Can't accept on Socket: " << errstr;
         throw exception;
     }
     csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = operator new(myaddrlen);
+    csock->_SocketPtr = malloc(myaddrlen);
     memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
 }
 
@@ -241,11 +234,11 @@ void netplus::tcp::bind(){
 }
 
 
-unsigned int netplus::tcp::sendData(std::shared_ptr<socket> csock, void* data, unsigned long size){
+unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::sendData(std::shared_ptr<socket> csock, void* data, unsigned long size,int flags){
+unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -261,7 +254,7 @@ unsigned int netplus::tcp::sendData(std::shared_ptr<socket> csock, void* data, u
         if(errno==EAGAIN)
             etype=NetException::Note;
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
@@ -271,11 +264,11 @@ unsigned int netplus::tcp::sendData(std::shared_ptr<socket> csock, void* data, u
 }
 
 
-unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, unsigned long size){
+unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, unsigned long size,int flags){
+unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -294,7 +287,7 @@ unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, u
 
 
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[etype] << "Socket recvdata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
@@ -302,7 +295,7 @@ unsigned int netplus::tcp::recvData(std::shared_ptr<socket> csock, void* data, u
     }
     return recvsize;
 }
-void netplus::tcp::connect(std::shared_ptr<socket> csock){
+void netplus::tcp::connect(socket *csock){
     NetException exception;
 
     csock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
@@ -310,7 +303,7 @@ void netplus::tcp::connect(std::shared_ptr<socket> csock){
     if ( ::connect(csock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
 
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
@@ -338,7 +331,6 @@ netplus::udp::udp() : socket() {
 }
 
 netplus::udp::udp(const netplus::udp& cudp) : socket(){
-    _Locked++;
     _Socket=cudp._Socket;
     _SocketPtr=cudp._SocketPtr;
     _SocketPtrSize=cudp._SocketPtrSize;
@@ -418,13 +410,9 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
 }
 
 netplus::udp::~udp(){
-    if(_Locked==0){
-        if(_Socket>=0)
-            ::close(_Socket);
-        operator delete(_SocketPtr,&_SocketPtrSize);
-    }else{
-        --_Locked;
-    }
+    if(_Socket>=0)
+        ::close(_Socket);
+    ::free(_SocketPtr);
 }
 
 netplus::udp::udp(int sock) : socket(){
@@ -456,7 +444,7 @@ int netplus::udp::getMaxconnections(){
     return _Maxconnections;
 }
 
-void netplus::udp::accept(std::shared_ptr<socket> csock){
+void netplus::udp::accept(socket *csock){
     NetException exception;
     struct sockaddr_storage myaddr;
     socklen_t myaddrlen;
@@ -466,7 +454,7 @@ void netplus::udp::accept(std::shared_ptr<socket> csock){
         throw exception;
     }
     csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = operator new(myaddrlen);
+    csock->_SocketPtr = malloc(myaddrlen);
     memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
 }
 
@@ -479,11 +467,11 @@ void netplus::udp::bind(){
 }
 
 
-unsigned int netplus::udp::sendData(std::shared_ptr<socket> csock, void* data, unsigned long size){
+unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::sendData(std::shared_ptr<socket> csock, void* data, unsigned long size,int flags){
+unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int rval=::send(csock->_Socket,
                         data,
@@ -496,7 +484,7 @@ unsigned int netplus::udp::sendData(std::shared_ptr<socket> csock, void* data, u
             etype=NetException::Note;
 
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
@@ -507,11 +495,11 @@ unsigned int netplus::udp::sendData(std::shared_ptr<socket> csock, void* data, u
 }
 
 
-unsigned int netplus::udp::recvData(std::shared_ptr<socket> csock, void* data, unsigned long size){
+unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::recvData(std::shared_ptr<socket> csock, void* data, unsigned long size,int flags){
+unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int recvsize=::recv(csock->_Socket,
                             data,
@@ -525,7 +513,7 @@ unsigned int netplus::udp::recvData(std::shared_ptr<socket> csock, void* data, u
             etype=NetException::Note;
 
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[etype] << "Socket recvData failed on Socket: " << csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
@@ -534,14 +522,14 @@ unsigned int netplus::udp::recvData(std::shared_ptr<socket> csock, void* data, u
     return recvsize;
 }
 
-void netplus::udp::connect(std::shared_ptr<socket> csock){
+void netplus::udp::connect(socket *csock){
     NetException exception;
 
     csock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_DGRAM,0);
 
     if ( ::connect(csock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
         char errstr[512];
-        strerror_r(errno,errstr,512);
+        strerror_r_netplus(errno,errstr,512);
 
         exception[NetException::Error] << "Socket connect: can't connect to server aborting " << " ErrorMsg:" << errstr;
         throw exception;
@@ -811,7 +799,7 @@ netplus::ssl::~ssl(){
     delete (SSLPrivate*)_Extension;
 }
 
-void netplus::ssl::accept(std::shared_ptr<socket> csock){
+void netplus::ssl::accept(socket *csock){
     NetException exception;
 
     int ret;
@@ -884,7 +872,7 @@ int netplus::ssl::getMaxconnections(){
     return _Maxconnections;
 }
 
-unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,unsigned long size){
+unsigned int netplus::ssl::sendData(socket *csock,void *data,unsigned long size){
     NetException exception;
 
     size_t sslsize=mbedtls_ssl_get_max_out_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
@@ -907,7 +895,7 @@ unsigned int netplus::ssl::sendData(std::shared_ptr<socket> csock,void *data,uns
     return rval;
 }
 
-unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,unsigned long size){
+unsigned int netplus::ssl::recvData(socket *csock,void *data,unsigned long size){
     NetException exception;
 
     size_t sslsize=mbedtls_ssl_get_max_in_record_payload(&((SSLPrivate*)csock->_Extension)->_SSLCtx);
@@ -932,7 +920,7 @@ unsigned int netplus::ssl::recvData(std::shared_ptr<socket> csock,void *data,uns
     return recvsize;
 }
 
-void netplus::ssl::connect(std::shared_ptr<socket> csock){
+void netplus::ssl::connect(socket *csock){
     NetException exception;
 
     int ret;

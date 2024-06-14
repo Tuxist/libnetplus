@@ -43,7 +43,7 @@
 #endif
 
 namespace netplus {
-    
+
     class NetException {
     public:
         

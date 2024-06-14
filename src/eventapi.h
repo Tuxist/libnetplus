@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <thread>
+#include <vector>
 #include <memory>
 
 #include "socket.h"
@@ -47,25 +49,21 @@ namespace netplus {
             /*memory allocation*/
             virtual void CreateConnetion(con **curon)=0;
             virtual void deleteConnetion(con *curon)=0;
-
-            /*Connection Ready to send Data
-             * DANGEROUS to burnout your cpu
-             *only use this if know what you do!*/
-            virtual void sendReady(con *curcon,bool ready)=0;
         };
 
         class event : public eventapi{
         public:
             event(socket *serversocket,int timeout = 60);
             void runEventloop();
-            void sendReady(con* curcon, bool ready);
             static void *WorkerThread(void *wrkevent);
 
             virtual ~event();
             static bool _Run;
             static bool _Restart;
         private:
-            pollapi *_Poll;
+            socket                  *_ServerSocket;
+            int                      _Timeout;
+            int                      _pollFD;
             friend class EventWorker;
         };
 };

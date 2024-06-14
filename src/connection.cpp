@@ -51,16 +51,17 @@ void netplus::condata<char>::resize(size_t size_c){
 
    std::move(begin()+size_c,end(),begin());
 
-   std::vector<char>::resize(rs-size_c);
+   std::vector<char,condataAlloc<char>>::resize(rs-size_c);
 }
 
 void netplus::condata<char>::append(const char* data, size_t datalen){
-   std::copy(data,data+datalen,std::inserter<std::vector<char>>(*this,end()));
+
+   std::copy(data,data+datalen,std::inserter<std::vector<char,condataAlloc<char>>>(*this,end()));
 }
 
 size_t netplus::condata<char>::search(const char* word){
     size_t wsize=strlen(word);
-    for(size_t i=0; i<size(); ++i){
+    for(size_t i=0; i<std::vector<char,condataAlloc<char>>::size(); ++i){
       for(size_t ii=0; ii<=wsize; ++ii){
         if(ii==wsize){
           return i-wsize;
@@ -76,11 +77,8 @@ size_t netplus::condata<char>::search(const char* word){
 }
 
 
-void netplus::con::sending(bool state) {
-    _eventapi->sendReady(this,state);
-}
 netplus::con::con(){
-    Lock.store(false);
+    state=0;
 }
 
 netplus::con::con(eventapi *eapi) : con(){
@@ -90,10 +88,3 @@ netplus::con::con(eventapi *eapi) : con(){
 netplus::con::~con(){
 }
 
-bool netplus::con::lock(){
-   return std::atomic_exchange_explicit(&Lock, true, std::memory_order_acquire);
-}
-
-void netplus::con::unlock(){
-   std::atomic_store_explicit(&Lock, false, std::memory_order_release);
-}

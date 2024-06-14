@@ -27,9 +27,13 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <mutex>
 
 #include "exception.h"
 
+namespace netplus {
+    std::mutex g_exception;
+};
 
 netplus::NetException::NetException() {
     curCType=Note;
@@ -52,6 +56,7 @@ const char* netplus::NetException::what(){
 }
 
 netplus::NetException& netplus::NetException::append(const char *src){
+    const std::lock_guard<std::mutex> lock(g_exception);
     msg.append(src);
     return *this;   
 }
@@ -66,6 +71,7 @@ netplus::NetException& netplus::NetException::operator<<(const char *src){
 };
 
 netplus::NetException& netplus::NetException::operator<<(int src){
+    const std::lock_guard<std::mutex> lock(g_exception);
     char buffer[255];
     snprintf(buffer,255,"%d",src);
     msg.append(buffer);

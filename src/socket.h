@@ -25,10 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#ifdef _GNU_SOURCE
-#undef _GNU_SOURCE
-#endif
-
 #include <memory>
 #include <string>
 
@@ -44,16 +40,16 @@ namespace netplus {
             virtual void  setnonblocking();
             
             
-            virtual void         accept(std::shared_ptr<socket> csock)=0;
+            virtual void         accept(socket *csock)=0;
             virtual void         bind()=0;
             virtual void         listen()=0;
             
             virtual int          getMaxconnections()=0;
             
-            virtual unsigned int sendData(std::shared_ptr<socket> csock,void *data,unsigned long size)=0;
-            virtual unsigned int recvData(std::shared_ptr<socket> csock,void *data,unsigned long size)=0;
+            virtual unsigned int sendData(socket *csock,void *data,unsigned long size)=0;
+            virtual unsigned int recvData(socket *csock,void *data,unsigned long size)=0;
             
-            virtual void         connect(std::shared_ptr<socket> csock)=0;
+            virtual void         connect(socket *csock)=0;
 
             virtual void         getAddress(std::string &addr)=0;
 
@@ -64,7 +60,6 @@ namespace netplus {
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
             int                 _Socket;
-            int                 _Locked;
             int                 _Type;
             void               *_Extension;
         };
@@ -79,7 +74,7 @@ namespace netplus {
                 int sockopts);
             ~tcp();
             
-            void          accept(std::shared_ptr<socket> csock);
+            void          accept(socket *csock);
             void          bind();
             void          listen();
             int           fd();
@@ -87,12 +82,12 @@ namespace netplus {
 
             int           getMaxconnections();
             
-            unsigned int sendData(std::shared_ptr<socket> socket,void *data,unsigned long size);
-            unsigned int sendData(std::shared_ptr<socket> socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(std::shared_ptr<socket>,void *data,unsigned long size);
-            unsigned int recvData(std::shared_ptr<socket>,void *data,unsigned long size,int flags);
+            unsigned int sendData(socket *socket,void *data,unsigned long size);
+            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
+            unsigned int recvData(socket *socket,void *data,unsigned long size);
+            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            virtual void connect(std::shared_ptr<socket> csock);
+            virtual void connect(socket *csock);
 
             void getAddress(std::string &addr);
 
@@ -112,7 +107,7 @@ namespace netplus {
                 int sockopts);
             ~udp();
 
-            void          accept(std::shared_ptr<socket> csock);
+            void          accept(socket * csock);
             void          bind();
             void          listen();
             int           fd();
@@ -120,12 +115,12 @@ namespace netplus {
 
             int           getMaxconnections();
 
-            unsigned int sendData(std::shared_ptr<socket> socket,void *data,unsigned long size);
-            unsigned int sendData(std::shared_ptr<socket> socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(std::shared_ptr<socket> socket,void *data,unsigned long size);
-            unsigned int recvData(std::shared_ptr<socket> socket,void *data,unsigned long size,int flags);
+            unsigned int sendData(socket *socket,void *data,unsigned long size);
+            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
+            unsigned int recvData(socket *socket,void *data,unsigned long size);
+            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
 
-            void connect(std::shared_ptr<socket> csock);
+            void connect(socket *csock);
 
             void getAddress(std::string &addr);
 
@@ -145,17 +140,17 @@ namespace netplus {
                 int sockopts,const unsigned char *cert,size_t certlen,const unsigned char *key, size_t keylen);
             ~ssl();
             
-            void          accept(std::shared_ptr<socket> csock);
+            void          accept(socket *csock);
             void          bind();
             void          listen();
             int           fd();
             ssl&          operator=(int socket);
             int           getMaxconnections();
             
-            unsigned int sendData(std::shared_ptr<socket> socket,void *data,unsigned long size);
-            unsigned int recvData(std::shared_ptr<socket> socket,void *data,unsigned long size);
+            unsigned int sendData(socket *socket,void *data,unsigned long size);
+            unsigned int recvData(socket *socket,void *data,unsigned long size);
             
-            void connect(std::shared_ptr<socket> csock);
+            void connect(socket *csock);
 
             void setnonblocking();
             void getAddress(std::string &addr);
