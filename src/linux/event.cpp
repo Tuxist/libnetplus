@@ -187,7 +187,7 @@ namespace netplus {
                 setevent.events =  EPOLLIN | EPOLLET | EPOLLONESHOT;
                 setevent.data.ptr = ccon;
 
-                int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->_Socket, &setevent);
+                int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->fd(), &setevent);
 
                 if ( estate < 0 ) {
                     char errstr[255];
