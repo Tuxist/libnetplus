@@ -121,7 +121,7 @@ namespace netplus {
             setevent.events = events;
             setevent.data.ptr = curcon;
 
-            if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,curcon->csock->_Socket
+            if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,curcon->csock->fd()
                 ,&setevent) < 0) {
                 except[NetException::Error] << "_setEpollEvents: can change socket!";
                 throw except;
