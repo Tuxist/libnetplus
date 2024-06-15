@@ -250,8 +250,6 @@ namespace netplus {
 
                 size_t ssize = BLOCKSIZE < wcon->SendData.size() ? BLOCKSIZE : wcon->SendData.size();
 
-                std::cout << ssize << std::endl;
-
                 size_t sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
 
                 wcon->SendData.resize(sended);

@@ -81,7 +81,7 @@ void netplus::socket::setnonblocking(){
     }
 }
 
-netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
+netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) {
     NetException exception;
     int optval = 1;
     if(sockopts == -1)
@@ -106,7 +106,7 @@ netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket
     _Type=sockettype::TCP;
 }
 
-netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
+netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) {
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
@@ -135,12 +135,14 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
         throw exception;
     }
 
+    _SocketPtr=nullptr;
+
     for (rp = result; rp != nullptr; rp = rp->ai_next) {
         _Socket = ::socket(rp->ai_family, rp->ai_socktype,
                            rp->ai_protocol);
         if (_Socket == -1)
             continue;
-        _SocketPtr = std::malloc(rp->ai_addrlen);
+        _SocketPtr = ::malloc(rp->ai_addrlen);
         memset(_SocketPtr, 0, rp->ai_addrlen);
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
@@ -161,16 +163,18 @@ netplus::tcp::~tcp(){
     ::free(_SocketPtr);
 }
 
-netplus::tcp::tcp() : socket(){
-    _SocketPtr=nullptr;
-    _SocketPtrSize=0;
-    _Socket=-1;
+netplus::tcp::tcp() {
+    _SocketPtr=::malloc(sizeof(sockaddr));
+    _SocketPtrSize=sizeof(sockaddr);
+    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
+    _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);;
     _Type=sockettype::TCP;
 }
 
-netplus::tcp::tcp(int sock) : socket(){
-    _SocketPtr=nullptr;
-    _SocketPtrSize=0;
+netplus::tcp::tcp(int sock) {
+    _SocketPtr=::malloc(sizeof(sockaddr));
+    _SocketPtrSize=sizeof(sockaddr);
+     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=sock;
     _Type=sockettype::TCP;
 }
@@ -291,9 +295,7 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
 void netplus::tcp::connect(socket *csock){
     NetException exception;
 
-    csock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
-
-    if ( ::connect(csock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+    if ( ::connect(csock->_Socket,(struct sockaddr*)csock->_SocketPtr,csock->_SocketPtrSize) < 0) {
 
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
@@ -316,14 +318,15 @@ void netplus::tcp::getAddress(std::string &addr){
 }
 
 
-netplus::udp::udp() : socket() {
-    _SocketPtr=nullptr;
-    _SocketPtrSize=0;
-    _Socket=-1;
+netplus::udp::udp() {
+    _SocketPtr=::malloc(sizeof(sockaddr));
+    _SocketPtrSize=sizeof(sockaddr);
+    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
+    _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_DGRAM,0);
     _Type=sockettype::UDP;
 }
 
-netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
+netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) {
     NetException exception;
     int optval = 1;
     if(sockopts == -1)
@@ -349,7 +352,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket
     _Type=sockettype::UDP;
 }
 
-netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
+netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
@@ -381,7 +384,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : 
                             rp->ai_protocol);
         if (_Socket == -1)
             continue;
-        _SocketPtr = operator new(rp->ai_addrlen);
+        _SocketPtr = malloc(rp->ai_addrlen);
         memset(_SocketPtr, 0, rp->ai_addrlen);
         _SocketPtrSize=rp->ai_addrlen;
         memcpy(_SocketPtr,rp->ai_addr,rp->ai_addrlen);
@@ -401,9 +404,10 @@ netplus::udp::~udp(){
     ::free(_SocketPtr);
 }
 
-netplus::udp::udp(int sock) : socket(){
-    _SocketPtr=nullptr;
-    _SocketPtrSize=0;
+netplus::udp::udp(int sock){
+    _SocketPtr=::malloc(sizeof(sockaddr));
+    _SocketPtrSize=sizeof(sockaddr);
+    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=sock;
     _Type=sockettype::UDP;
 }
@@ -511,9 +515,7 @@ unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long siz
 void netplus::udp::connect(socket *csock){
     NetException exception;
 
-    csock->_Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_DGRAM,0);
-
-    if ( ::connect(csock->_Socket,(struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0) {
+    if ( ::connect(csock->fd(),(struct sockaddr*)csock->_SocketPtr,csock->_SocketPtrSize) < 0) {
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 
