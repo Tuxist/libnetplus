@@ -81,13 +81,6 @@ void netplus::socket::setnonblocking(){
     }
 }
 
-netplus::tcp::tcp(const netplus::tcp& ctcp){
-    _Socket=ctcp._Socket;
-    _SocketPtr=ctcp._SocketPtr;
-    _SocketPtrSize=ctcp._SocketPtrSize;
-    _Type=sockettype::TCP;
-}
-
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket(){
     NetException exception;
     int optval = 1;
@@ -327,13 +320,6 @@ netplus::udp::udp() : socket() {
     _SocketPtr=nullptr;
     _SocketPtrSize=0;
     _Socket=-1;
-    _Type=sockettype::UDP;
-}
-
-netplus::udp::udp(const netplus::udp& cudp) : socket(){
-    _Socket=cudp._Socket;
-    _SocketPtr=cudp._SocketPtr;
-    _SocketPtrSize=cudp._SocketPtrSize;
     _Type=sockettype::UDP;
 }
 
