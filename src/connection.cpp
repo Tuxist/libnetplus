@@ -55,7 +55,6 @@ void netplus::condata<char>::resize(size_t size_c){
 }
 
 void netplus::condata<char>::append(const char* data, size_t datalen){
-
    std::copy(data,data+datalen,std::inserter<std::vector<char,condataAlloc<char>>>(*this,end()));
 }
 
