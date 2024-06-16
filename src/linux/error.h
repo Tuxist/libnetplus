@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace netplus {
     inline void strerror_r_netplus(int err, char *str, size_t str_len){
-#ifdef _GNU_SOURCE
+#ifdef __GNU_LIBRARY__
         char *buf=new char [str_len];
         char *dest=strerror_r(err,buf,str_len);
         memcpy(str,dest,str_len);
