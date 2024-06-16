@@ -52,7 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BLOCKSIZE 16384
 
 namespace netplus {
-    std::mutex clock;
     class pollapi {
     public:
         pollapi(eventapi *eapi,int timeout){
@@ -153,56 +152,55 @@ namespace netplus {
         };
 
         void ConnectEventHandler(int pos)  {
-            std::lock_guard<std::mutex> lock(clock);
             NetException exception;
-            con *ccon;
-            _evtapi->CreateConnetion(&ccon);
-
-            try {
+            con *ccon=(con*)_Events[pos].data.ptr;
+            if(!ccon){
+                _evtapi->CreateConnetion(&ccon);
                 if(_ServerSocket->_Type==sockettype::TCP){
                     ccon->csock=new tcp();
-                    _ServerSocket->accept(ccon->csock);
                 }else if(_ServerSocket->_Type==sockettype::UDP){
                     ccon->csock=new udp();
-                    _ServerSocket->accept(ccon->csock);
                 }else if(_ServerSocket->_Type==sockettype::SSL){
                     ccon->csock=new ssl();
-                    _ServerSocket->accept(ccon->csock);
-                }else{
-                    exception[NetException::Error] << "ConnectEventHandler: Protocoll are supported";
-                    throw exception;
-
                 }
+            }
 
-                ccon->csock->setnonblocking();
-
-                std::string ip;
-                ccon->csock->getAddress(ip);
-                std::cout << "Connected: " << ip  << std::endl;
-
-                ccon->lasteventime = time(nullptr);
-                ccon->state=EVIN;
-
-                struct epoll_event setevent { 0 };
-                setevent.events =  EPOLLIN | EPOLLET | EPOLLONESHOT;
-                setevent.data.ptr = ccon;
-
-                int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->fd(), &setevent);
-
-                if ( estate < 0 ) {
-                    char errstr[255];
-                    strerror_r_netplus(errno,errstr,255);
-                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
-                    throw exception;
+            try{
+                _ServerSocket->accept(ccon->csock);
+            }catch(NetException &e){
+                if(e.getErrorType()== NetException::Note){
+                    ccon->state=EVCON;
+                    setpollEvents(ccon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                    return;
                 }
-
-                _evtapi->ConnectEvent(ccon);
-
-            } catch (NetException& e) {
-                _evtapi->deleteConnetion(ccon);
-                _Events[pos].data.ptr=NULL;
                 throw e;
             }
+            ccon->csock->setnonblocking();
+
+
+            std::string ip;
+            ccon->csock->getAddress(ip);
+            std::cout << "Connected: " << ip  << std::endl;
+
+            ccon->lasteventime = time(nullptr);
+            ccon->state=EVIN;
+
+            struct epoll_event setevent { 0 };
+            setevent.events =  EPOLLIN | EPOLLET | EPOLLONESHOT;
+            setevent.data.ptr = ccon;
+
+            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->fd(), &setevent);
+
+            if ( estate < 0 ) {
+                char errstr[255];
+                strerror_r_netplus(errno,errstr,255);
+                if(errno==EWOULDBLOCK)
+                    exception[NetException::Note] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
+                else
+                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
+                throw exception;
+            }
+            _evtapi->ConnectEvent(ccon);
 
         };
 
@@ -216,6 +214,7 @@ namespace netplus {
                 if(rcvsize>0){
                      rcon->RecvData.append(buf,rcvsize);
                     _evtapi->RequestEvent(rcon);
+                    rcon->state=EVIN;
                     setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
                 }
 
