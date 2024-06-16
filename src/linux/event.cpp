@@ -216,6 +216,7 @@ namespace netplus {
                 if(rcvsize>0){
                      rcon->RecvData.append(buf,rcvsize);
                     _evtapi->RequestEvent(rcon);
+                    setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
                 }
 
                 rcon->lasteventime = time(nullptr);
@@ -226,8 +227,7 @@ namespace netplus {
                     return;
                 }
 
-                setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
-
+                CloseEventHandler(pos);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
