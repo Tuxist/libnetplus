@@ -249,9 +249,17 @@ namespace netplus {
 
                 size_t ssize = BLOCKSIZE < wcon->SendData.size() ? BLOCKSIZE : wcon->SendData.size();
 
-                size_t sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
 
-                wcon->SendData.resize(sended);
+                size_t sended;
+
+                try{
+                    sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
+                    wcon->SendData.resize(sended);
+                }catch(NetException &e){
+                    if(e.getErrorType()!=NetException::Note){
+                        throw e;
+                    }
+                }
 
                 wcon->lasteventime = time(nullptr);
 

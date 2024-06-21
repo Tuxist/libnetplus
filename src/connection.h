@@ -119,9 +119,19 @@ namespace netplus {
 
         template <> class condata<char> : public std::vector<char,condataAlloc<char>>{
         public:
+            condata();
             void   resize(size_t size_c);
             void   append(const char *data,size_t datalen);
             size_t search(const char *word);
+            void   push_back(char a);
+
+            void    setlimit(size_t size);
+            size_t  getlimit();
+
+            size_t   pos;
+
+        private:
+            size_t limit;
         };
 
         class con {

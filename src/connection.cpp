@@ -46,6 +46,12 @@
   * Use it everyday with good health.
   */
 
+netplus::condata<char>::condata() : vector(){
+  pos=0;
+  limit=131072;
+}
+
+
 void netplus::condata<char>::resize(size_t size_c){
    size_t rs = size();
 
@@ -55,6 +61,11 @@ void netplus::condata<char>::resize(size_t size_c){
 }
 
 void netplus::condata<char>::append(const char* data, size_t datalen){
+  if(this->size()+datalen > limit ){
+      NetException excep;
+      excep[NetException::Note] << "condata: max size reached !";
+      throw excep;
+  }
    std::copy(data,data+datalen,std::inserter<std::vector<char,condataAlloc<char>>>(*this,end()));
 }
 
@@ -74,6 +85,27 @@ size_t netplus::condata<char>::search(const char* word){
     }
     return std::string::npos;
 }
+
+void netplus::condata<char>::push_back(char a){
+  if(this->size()+sizeof(a) > limit ){
+      NetException excep;
+      excep[NetException::Note] << "condata: max size reached !";
+      throw excep;
+  }
+  std::vector<char,condataAlloc<char>>push_back(a);
+}
+
+
+void netplus::condata<char>::setlimit(size_t size){
+  limit = size *1024;
+}
+
+
+size_t netplus::condata<char>::getlimit(){
+  return limit;
+
+}
+
 
 
 netplus::con::con(){
