@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <memory>
 
 #include <unistd.h>
 #include <signal.h>
@@ -89,17 +90,18 @@ namespace netplus {
             _Timeout=timeout;
             _pollFD=pollfd;
             _ServerSocket = serversocket;
-            _Events = new epoll_event[_ServerSocket->getMaxconnections()];
+            _Events = new epoll_event*[_ServerSocket->getMaxconnections()];
             int maxcon=_ServerSocket->getMaxconnections();
             for (int i = 0; i <maxcon;  ++i){
-                _Events[i].data.ptr = nullptr;
+                _Events[i]=new struct epoll_event;
+                memset(_Events[i],0,sizeof(struct epoll_event));
             }
         };
 
         ~poll() {
             int maxcon=_ServerSocket->getMaxconnections();
             for (int i = 0; i < maxcon; ++i){
-                _evtapi->deleteConnetion((con*)_Events[i].data.ptr);
+                _evtapi->deleteConnetion((con*)_Events[i]->data.ptr);
             }
             delete _Events;
         };
@@ -128,7 +130,7 @@ namespace netplus {
         }
 
         int pollState(int pos){
-            con *pcon = (con*)_Events[pos].data.ptr;
+            con *pcon = (con*)_Events[pos]->data.ptr;
             NetException exception;
 
             if(!pcon)
@@ -138,7 +140,7 @@ namespace netplus {
         }
 
         int waitEventHandler() {
-            int evn = epoll_wait(_pollFD,_Events, _ServerSocket->getMaxconnections(), -1);
+            int evn = epoll_wait(_pollFD,*_Events, _ServerSocket->getMaxconnections(), -1);
             if (evn < 0 ) {
                 NetException exception;
 
@@ -153,7 +155,7 @@ namespace netplus {
 
         void ConnectEventHandler(int pos)  {
             NetException exception;
-            con *ccon=(con*)_Events[pos].data.ptr;
+            con *ccon=(con*)_Events[pos]->data.ptr;
             if(!ccon){
                 _evtapi->CreateConnetion(&ccon);
                 if(_ServerSocket->_Type==sockettype::TCP){
@@ -197,7 +199,6 @@ namespace netplus {
                 if(errno==EWOULDBLOCK){
                     exception[NetException::Note] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                     ccon->state=EVCON;
-                    return;
                 }else{
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                 }
@@ -208,7 +209,8 @@ namespace netplus {
         };
 
         void ReadEventHandler(int pos) {
-            con *rcon = (con*)_Events[pos].data.ptr;
+            con *rcon = (con*)_Events[pos]->data.ptr;
+
 
             try{
                 char buf[BLOCKSIZE];
@@ -219,6 +221,8 @@ namespace netplus {
                     rcon->state=EVIN;
                     setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
                 }
+
+
 
                 _evtapi->RequestEvent(rcon);
 
@@ -243,8 +247,11 @@ namespace netplus {
         };
 
         void WriteEventHandler(int pos) {
-            con *wcon = (con*)_Events[pos].data.ptr;
+            con *wcon = (con*)_Events[pos]->data.ptr;
             try{
+
+                _evtapi->ResponseEvent(wcon);
+
                 if(wcon->SendData.empty()){
                     wcon->state=EVIN;
                     setpollEvents(wcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
@@ -256,20 +263,12 @@ namespace netplus {
 
                 size_t sended;
 
-                try{
-                    sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
-                    wcon->SendData.resize(sended);
-                }catch(NetException &e){
-                    if(e.getErrorType()!=NetException::Note){
-                        throw e;
-                    }
-                }
-
-                wcon->lasteventime = time(nullptr);
-
                 wcon->state=EVOUT;
 
-                _evtapi->ResponseEvent(wcon);
+                sended = _ServerSocket->sendData(wcon->csock,wcon->SendData.data(),ssize);
+                wcon->SendData.resize(sended);
+
+                wcon->lasteventime = time(nullptr);
 
                 setpollEvents(wcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
             }catch(NetException &e){
@@ -285,7 +284,7 @@ namespace netplus {
 
 
         void CloseEventHandler(int pos) {
-            con *ccon = (con*)_Events[pos].data.ptr;
+            con *ccon = (con*)_Events[pos]->data.ptr;
 
             if(!ccon)
                 return;
@@ -305,7 +304,7 @@ namespace netplus {
 
                 _evtapi->deleteConnetion(ccon);
 
-                _Events[pos].data.ptr=nullptr;
+                _Events[pos]->data.ptr=nullptr;
             }catch(NetException &e){
                 throw e;
             }
@@ -314,7 +313,7 @@ namespace netplus {
 
     private:
         int                  _pollFD;
-        struct epoll_event  *_Events;
+        struct epoll_event **_Events;
         socket              *_ServerSocket;
         int                  _Timeout;
     };
@@ -364,8 +363,10 @@ EVENTLOOP:
                                 pollptr.WriteEventHandler(i);
                                 break;
                             default:
+                                NetException  e;
+                                e[NetException::Error] << "EventWorker: Request type not kwon!";
                                 pollptr.CloseEventHandler(i);
-                                break;
+                                throw e;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
@@ -476,9 +477,10 @@ EVENTLOOP:
            }
         }
 
+
         for(size_t i = 0; i < thrs; i++){
             threadpool[i]->join();
-            delete[] threadpool[i];
+            delete threadpool[i];
         }
 
         delete[] threadpool;
