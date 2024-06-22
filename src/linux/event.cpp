@@ -194,10 +194,13 @@ namespace netplus {
             if ( estate < 0 ) {
                 char errstr[255];
                 strerror_r_netplus(errno,errstr,255);
-                if(errno==EWOULDBLOCK)
+                if(errno==EWOULDBLOCK){
                     exception[NetException::Note] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
-                else
+                    ccon->state=EVCON;
+                    return;
+                }else{
                     exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
+                }
                 throw exception;
             }
             _evtapi->ConnectEvent(ccon);
@@ -212,11 +215,12 @@ namespace netplus {
                 size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
 
                 if(rcvsize>0){
-                     rcon->RecvData.append(buf,rcvsize);
-                    _evtapi->RequestEvent(rcon);
+                    rcon->RecvData.append(buf,rcvsize);
                     rcon->state=EVIN;
                     setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
                 }
+
+                _evtapi->RequestEvent(rcon);
 
                 rcon->lasteventime = time(nullptr);
 
