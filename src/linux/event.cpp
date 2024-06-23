@@ -223,7 +223,6 @@ namespace netplus {
                 if(rcvsize>0){
                     rcon->RecvData.append(buf,rcvsize);
                     rcon->state=EVIN;
-                    setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
                 }
 
                 _evtapi->RequestEvent(rcon);
@@ -234,7 +233,7 @@ namespace netplus {
                     return;
                 }
 
-                setpollEvents(rcon,EPOLLIN | EPOLLET);
+                setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
