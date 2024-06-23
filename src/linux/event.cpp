@@ -469,7 +469,7 @@ EVENTLOOP:
         }
 
 
-        for(size_t i = 0; i < _Threads; i++){
+        for(size_t i = 0; i < threads; i++){
             threadpool[i]->join();
             delete threadpool[i];
         }
