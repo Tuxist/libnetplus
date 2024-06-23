@@ -214,6 +214,9 @@ namespace netplus {
                 if(rcvsize>0){
                     rcon->RecvData.append(buf,rcvsize);
                     rcon->state=EVIN;
+                }else{
+                    CloseEventHandler(pos,tid,args);
+                    return;
                 }
 
                 _evtapi->RequestEvent(rcon,tid,args);
