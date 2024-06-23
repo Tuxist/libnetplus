@@ -418,6 +418,7 @@ EVENTLOOP:
         _ServerSocket->bind();
         _ServerSocket->setnonblocking();
         _ServerSocket->listen();
+        threads=sysconf(_SC_NPROCESSORS_ONLN);
     }
 
     event::~event() {
@@ -426,7 +427,6 @@ EVENTLOOP:
     void event::runEventloop(void *args) {
         NetException exception;
 
-        size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
 
         _pollFD = epoll_create1(0);
@@ -455,9 +455,9 @@ EVENTLOOP:
         eargs.pollfd=_pollFD;
         eargs.timeout=_Timeout;
 
-        std::thread **threadpool = new std::thread*[thrs];
+        std::thread **threadpool = new std::thread*[threads];
 
-        for (size_t i = 0; i < thrs; i++) {
+        for (size_t i = 0; i < threads; i++) {
             try {
                 threadpool[i] = new std::thread([&eargs,i]{
                     EventWorker *evt = new EventWorker(i,&eargs);
@@ -469,7 +469,7 @@ EVENTLOOP:
         }
 
 
-        for(size_t i = 0; i < thrs; i++){
+        for(size_t i = 0; i < _Threads; i++){
             threadpool[i]->join();
             delete threadpool[i];
         }

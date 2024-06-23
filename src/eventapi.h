@@ -60,6 +60,8 @@ namespace netplus {
             virtual ~event();
             static bool _Run;
             static bool _Restart;
+
+            int                      threads;
         private:
             socket                  *_ServerSocket;
             int                      _Timeout;
