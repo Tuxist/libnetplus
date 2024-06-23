@@ -41,10 +41,10 @@ namespace netplus {
         class eventapi {
         public:
              /*HTTP API Events*/
-            virtual void RequestEvent(con *curcon);
-            virtual void ResponseEvent(con *curcon);
-            virtual void ConnectEvent(con *curcon);
-            virtual void DisconnectEvent(con *curcon);
+            virtual void RequestEvent(con *curcon,const int tid,void *args);
+            virtual void ResponseEvent(con *curcon,const int tid,void *args);
+            virtual void ConnectEvent(con *curcon,const int tid,void *args);
+            virtual void DisconnectEvent(con *curcon,const int tid,void *args);
 
             /*memory allocation*/
             virtual void CreateConnetion(con **curon)=0;
@@ -54,7 +54,7 @@ namespace netplus {
         class event : public eventapi{
         public:
             event(socket *serversocket,int timeout = 60);
-            void runEventloop();
+            void runEventloop(void *args=nullptr);
             static void *WorkerThread(void *wrkevent);
 
             virtual ~event();

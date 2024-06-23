@@ -72,10 +72,10 @@ namespace netplus {
 
         /*EventHandler*/
         virtual  int waitEventHandler()=0;
-        virtual void ConnectEventHandler(int pos)=0;
-        virtual void ReadEventHandler(int pos)=0;
-        virtual void WriteEventHandler(int pos)=0;
-        virtual void CloseEventHandler(int pos)=0;
+        virtual void ConnectEventHandler(int pos,const int tid,void *args)=0;
+        virtual void ReadEventHandler(int pos,const int tid,void *args)=0;
+        virtual void WriteEventHandler(int pos,const int tid,void *args)=0;
+        virtual void CloseEventHandler(int pos,const int tid,void *args)=0;
 
     protected:
         eventapi *_evtapi;
@@ -154,7 +154,7 @@ namespace netplus {
             return evn;
         };
 
-        void ConnectEventHandler(int pos)  {
+        void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
             con *ccon=(con*)_Events[pos].data.ptr;
             if(!ccon){
@@ -168,16 +168,7 @@ namespace netplus {
                 }
             }
 
-            try{
-                _ServerSocket->accept(ccon->csock);
-            }catch(NetException &e){
-                if(e.getErrorType()== NetException::Note){
-                    ccon->state=EVCON;
-                    setpollEvents(ccon,EPOLLIN | EPOLLET | EPOLLONESHOT);
-                    return;
-                }
-                throw e;
-            }
+            _ServerSocket->accept(ccon->csock);
             ccon->csock->setnonblocking();
 
 
@@ -205,11 +196,11 @@ namespace netplus {
                 }
                 throw exception;
             }
-            _evtapi->ConnectEvent(ccon);
+            _evtapi->ConnectEvent(ccon,tid,args);
 
         };
 
-        void ReadEventHandler(int pos) {
+        void ReadEventHandler(int pos,const int tid,void *args) {
             con *rcon = (con*)_Events[pos].data.ptr;
 
             if(!rcon)
@@ -225,7 +216,7 @@ namespace netplus {
                     rcon->state=EVIN;
                 }
 
-                _evtapi->RequestEvent(rcon);
+                _evtapi->RequestEvent(rcon,tid,args);
 
                 if(!rcon->SendData.empty()){
                     rcon->state=EVOUT;
@@ -245,11 +236,11 @@ namespace netplus {
             }
         };
 
-        void WriteEventHandler(int pos) {
+        void WriteEventHandler(int pos,const int tid,void *args) {
             con *wcon = (con*)_Events[pos].data.ptr;
             try{
 
-                _evtapi->ResponseEvent(wcon);
+                _evtapi->ResponseEvent(wcon,tid,args);
 
                 if(wcon->SendData.empty()){
                     wcon->state=EVIN;
@@ -282,7 +273,7 @@ namespace netplus {
         };
 
 
-        void CloseEventHandler(int pos) {
+        void CloseEventHandler(int pos,const int tid,void *args) {
             con *ccon = (con*)_Events[pos].data.ptr;
 
             if(!ccon)
@@ -299,7 +290,7 @@ namespace netplus {
                 }
                  delete  ccon->csock;
 
-                _evtapi->DisconnectEvent(ccon);
+                _evtapi->DisconnectEvent(ccon,tid,args);
 
                 _evtapi->deleteConnetion(ccon);
 
@@ -330,6 +321,7 @@ namespace netplus {
             pollfd=eargs.pollfd;
             ssocket=eargs.ssocket;
             timeout=eargs.timeout;
+            args=eargs.args;
         }
 
         int                 pollfd;
@@ -337,14 +329,13 @@ namespace netplus {
 
         eventapi           *event;
         socket             *ssocket;
+        void               *args;
     };
 
     class EventWorker {
     public:
-        EventWorker(void* args) {
-
-            EventWorkerArgs *wargs=(EventWorkerArgs*)args;
-            poll pollptr(wargs->ssocket,wargs->event,wargs->pollfd,wargs->timeout);
+        EventWorker(int tid,EventWorkerArgs* args) {
+            poll pollptr(args->ssocket,args->event,args->pollfd,args->timeout);
 
 EVENTLOOP:
             try {
@@ -353,18 +344,18 @@ EVENTLOOP:
                     try{
                         switch (pollptr.pollState(i)) {
                             case pollapi::EventHandlerStatus::EVCON:
-                                pollptr.ConnectEventHandler(i);
+                                pollptr.ConnectEventHandler(i,tid,args);
                                 break;
                             case pollapi::EventHandlerStatus::EVIN:
-                                pollptr.ReadEventHandler(i);
+                                pollptr.ReadEventHandler(i,tid,args);
                                 break;
                             case pollapi::EventHandlerStatus::EVOUT:
-                                pollptr.WriteEventHandler(i);
+                                pollptr.WriteEventHandler(i,tid,args);
                                 break;
                             default:
                                 NetException  e;
                                 e[NetException::Error] << "EventWorker: Request type not kwon!";
-                                pollptr.CloseEventHandler(i);
+                                pollptr.CloseEventHandler(i,tid,args);
                                 throw e;
                         }
                     }catch(NetException& e){
@@ -375,7 +366,7 @@ EVENTLOOP:
                                 break;
                             default:
                                 std::cerr << e.what() << std::endl;
-                                pollptr.CloseEventHandler(i);
+                                pollptr.CloseEventHandler(i,tid,args);
                                 break;
                         }
                     }
@@ -392,19 +383,19 @@ EVENTLOOP:
         }
     };
 
-    void eventapi::RequestEvent(con *curcon){
+    void eventapi::RequestEvent(con *curcon,const int tid,void *args){
         //dummy
     };
 
-    void eventapi::ResponseEvent(con *curcon){
+    void eventapi::ResponseEvent(con *curcon,const int tid,void *args){
         //dummy
     };
 
-    void eventapi::ConnectEvent(con *curcon){
+    void eventapi::ConnectEvent(con *curcon,const int tid,void *args){
         //dummy
     };
 
-    void eventapi::DisconnectEvent(con *curcon){
+    void eventapi::DisconnectEvent(con *curcon,const int tid,void *args){
         //dummy
     };
 
@@ -432,10 +423,10 @@ EVENTLOOP:
     event::~event() {
     }
 
-    void event::runEventloop() {
+    void event::runEventloop(void *args) {
         NetException exception;
 
-        size_t thrs =  sysconf(_SC_NPROCESSORS_ONLN);
+        size_t thrs = sysconf(_SC_NPROCESSORS_ONLN);
         signal(SIGPIPE, SIG_IGN);
 
         _pollFD = epoll_create1(0);
@@ -468,8 +459,8 @@ EVENTLOOP:
 
         for (size_t i = 0; i < thrs; i++) {
             try {
-                threadpool[i] = new std::thread([&eargs]{
-                    EventWorker *evt = new EventWorker((void*)&eargs);
+                threadpool[i] = new std::thread([&eargs,i]{
+                    EventWorker *evt = new EventWorker(i,&eargs);
                     delete evt;
                 });
            } catch (NetException& e) {
