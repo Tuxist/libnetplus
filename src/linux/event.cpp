@@ -157,15 +157,17 @@ namespace netplus {
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
             con *ccon=(con*)_Events[pos].data.ptr;
-            if(!ccon){
-                _evtapi->CreateConnetion(&ccon);
-                if(_ServerSocket->_Type==sockettype::TCP){
-                    ccon->csock=new tcp();
-                }else if(_ServerSocket->_Type==sockettype::UDP){
-                    ccon->csock=new udp();
-                }else if(_ServerSocket->_Type==sockettype::SSL){
-                    ccon->csock=new ssl();
-                }
+            if(ccon){
+                CloseEventHandler(pos,tid,args);
+            }
+
+            _evtapi->CreateConnetion(&ccon);
+            if(_ServerSocket->_Type==sockettype::TCP){
+                ccon->csock=new tcp();
+            }else if(_ServerSocket->_Type==sockettype::UDP){
+                ccon->csock=new udp();
+            }else if(_ServerSocket->_Type==sockettype::SSL){
+                ccon->csock=new ssl();
             }
 
             _ServerSocket->accept(ccon->csock);
@@ -188,12 +190,7 @@ namespace netplus {
             if ( estate < 0 ) {
                 char errstr[255];
                 strerror_r_netplus(errno,errstr,255);
-                if(errno==EWOULDBLOCK){
-                    exception[NetException::Note] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
-                    ccon->state=EVCON;
-                }else{
-                    exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
-                }
+                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
                 throw exception;
             }
             _evtapi->ConnectEvent(ccon,tid,args);
