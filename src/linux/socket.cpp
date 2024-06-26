@@ -897,9 +897,7 @@ unsigned int netplus::ssl::recvData(socket *csock,void *data,unsigned long size)
 
         int etype=NetException::Error;
 
-        if( recvsize==MBEDTLS_ERR_SSL_WANT_WRITE ||
-            recvsize==MBEDTLS_ERR_SSL_WANT_READ ||
-            recvsize==MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET )
+        if( recvsize==MBEDTLS_ERR_SSL_WANT_WRITE || recvsize==MBEDTLS_ERR_SSL_WANT_READ )
             etype=NetException::Note;
 
         exception[etype] << "Socket recvdata failed on Socket: " << err_str;
