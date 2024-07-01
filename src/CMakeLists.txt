@@ -3,11 +3,24 @@ list(APPEND netplussrc
     connection.cpp
 )
 
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     list(APPEND netplussrc
-        linux/socket.cpp
-        linux/event.cpp
+        windows/socket.cpp
     )
+else()
+    list(APPEND netplussrc
+        posix/socket.cpp
+    )
+endif()
+
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND netplussrc event/epoll.cpp)
+elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+    list(APPEND netplussrc event/iocp.cpp)
+elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Bsd")
+    list(APPEND netplussrc event/kqueue.cpp)
+else()
+    list(APPEND netplussrc event/poll.cpp)
 endif()
 
 include_directories(
