@@ -1,6 +1,7 @@
 list(APPEND netplussrc
     exception.cpp
     connection.cpp
+    ssl.cpp
 )
 
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
