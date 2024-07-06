@@ -91,8 +91,6 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     NetException exception;
     _Maxconnections=maxconnections;
-    if(sockopts == -1)
-        sockopts=SO_REUSEADDR;
 
     int ret;
     char err_str[256];
@@ -171,8 +169,6 @@ netplus::ssl::ssl(const char *addr,int port,int maxconnections,int sockopts,cons
 
     NetException exception;
     _Maxconnections=maxconnections;
-    if(sockopts == -1)
-        sockopts=SO_REUSEADDR;
 
     int ret;
     char err_str[256];
@@ -462,13 +458,13 @@ void netplus::ssl::setnonblocking(){
 
 
 void netplus::ssl::getAddress(std::string &addr){
-    if(!_SocketPtr)
-        return;
-    char ipaddr[INET6_ADDRSTRLEN];
-    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
-        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
-    else
-        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
-    addr=ipaddr;
+    // if(!_SocketPtr)
+    //     return;
+    // char ipaddr[INET6_ADDRSTRLEN];
+    // if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+    //     inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    // else
+    //     inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
+    // addr=ipaddr;
 }
 
