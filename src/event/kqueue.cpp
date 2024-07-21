@@ -184,8 +184,7 @@ namespace netplus {
 
             struct kevent setevent { 0 };
 
-            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT|
-                              EV_CLEAR,NOTE_WRITE,0,ccon);
+            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT,0,0,ccon);
 
             int estate = kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr);
 
@@ -442,7 +441,7 @@ EVENTLOOP:
             0
         };
 
-        EV_SET(&setevent,_pollFD,EVFILT_READ,EV_ADD| EV_DISPATCH,0,0,nullptr);
+        EV_SET(&setevent,_pollFD,EVFILT_READ,EV_ADD| EV_DISPATCH | EV_CLEAR,NOTE_WRITE,0,nullptr);
 
         if (kevent(_pollFD,&setevent,1,nullptr,0,nullptr) < 0) {
             exception[NetException::Critical] << "initEventHandler: can't create kqueue";
