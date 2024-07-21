@@ -359,14 +359,19 @@ EVENTLOOP:
                                 pollptr.WriteEventHandler(i,tid,args);
                                 break;
                             default:
-                                pollptr.resetEventHandler(i);
-                                break;
+                                NetException  e;
+                                e[NetException::Error] << "EventWorker: Request type not kwon!";
+                                pollptr.CloseEventHandler(i,tid,args);
+                                throw e;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
                             case NetException::Critical:
                                 throw e;
                             case NetException::Note:
+                                break;
+                            case NetException::Close:
+                                pollptr.CloseEventHandler(i,tid,args);
                                 break;
                             default:
                                 std::cerr << e.what() << std::endl;

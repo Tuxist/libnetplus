@@ -55,7 +55,7 @@ namespace netplus {
         
         const char* what();
         
-        enum Type {Note,Warning,Error,Critical};
+        enum Type {Note,Warning,Error,Critical,Close};
         
         NetException& append(const char *src);
         NetException& operator[](int errtype);

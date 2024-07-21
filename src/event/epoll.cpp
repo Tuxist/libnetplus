@@ -357,8 +357,10 @@ EVENTLOOP:
                                 pollptr.WriteEventHandler(i,tid,args);
                                 break;
                             default:
-                                pollptr.resetEventHandler(i);
-                                break;
+                                NetException  e;
+                                e[NetException::Error] << "EventWorker: Request type not kwon!";
+                                pollptr.CloseEventHandler(i,tid,args);
+                                throw e;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
