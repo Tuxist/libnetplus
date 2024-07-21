@@ -184,7 +184,8 @@ namespace netplus {
 
             struct kevent setevent { 0 };
 
-            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT, 0,0,ccon);
+            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT|
+                              EV_CLEAR,NOTE_WRITE,0,ccon);
 
             int estate = kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr);
 
