@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <unistd.h>
 #include <signal.h>
-#include <sys/epoll.h>
+#include <sys/event.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <mutex>
@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "eventapi.h"
 #include "connection.h"
-#include "error.h"
+#include "../posix/error.h"
 #include <assert.h>
 
 #define READEVENT 0
@@ -90,19 +90,21 @@ namespace netplus {
             _Timeout=timeout;
             _pollFD=pollfd;
             _ServerSocket = serversocket;
-            _Events = new epoll_event[_ServerSocket->getMaxconnections()];
+            _Events = new struct kevent[_ServerSocket->getMaxconnections()];
             int maxcon=_ServerSocket->getMaxconnections();
             for (int i = 0; i <maxcon;  ++i){
-                _Events[i].events=-1;
-                _Events[i].data.fd=-1;
-                _Events[i].data.ptr=nullptr;
+                _Events[i].filter=-1;
+                _Events[i].flags=-1;
+                _Events[i].fflags=-1;
+                _Events[i].ident=-1;
+                _Events[i].udata=nullptr;
             }
         };
 
         ~poll() {
             int maxcon=_ServerSocket->getMaxconnections();
             for (int i = 0; i < maxcon; ++i){
-                _evtapi->deleteConnetion((con*)_Events[i].data.ptr);
+                _evtapi->deleteConnetion((con*)_Events[i].udata);
             }
             delete _Events;
         };
@@ -119,19 +121,18 @@ namespace netplus {
 
         void setpollEvents(con* curcon,int events){
             NetException except;
-            struct epoll_event setevent = { 0 };
-            setevent.events = events;
-            setevent.data.ptr = curcon;
+            struct kevent setevent = { 0 };
 
-            if (epoll_ctl(_pollFD, EPOLL_CTL_MOD,curcon->csock->fd()
-                ,&setevent) < 0) {
+            EV_SET(&setevent,curcon->csock->fd(),events,EV_ADD | EV_DISPATCH| EV_ONESHOT,0,0,curcon);
+
+            if ( kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr) < 0) {
                 except[NetException::Error] << "_setEpollEvents: can change socket!";
                 throw except;
             }
         }
 
         int pollState(int pos){
-            con *pcon = (con*)_Events[pos].data.ptr;
+            con *pcon = (con*)_Events[pos].udata;
             NetException exception;
 
             if(!pcon)
@@ -141,7 +142,7 @@ namespace netplus {
         }
 
         int waitEventHandler() {
-            int evn = epoll_wait(_pollFD,_Events, _ServerSocket->getMaxconnections(), -1);
+            int evn = kevent(_pollFD,_Events,0,nullptr,_ServerSocket->getMaxconnections(),nullptr);
             if (evn < 0 ) {
                 NetException exception;
 
@@ -156,7 +157,7 @@ namespace netplus {
 
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
-            con *ccon=(con*)_Events[pos].data.ptr;
+            con *ccon=(con*)_Events[pos].udata;
             if(ccon){
                 CloseEventHandler(pos,tid,args);
             }
@@ -181,11 +182,11 @@ namespace netplus {
             ccon->lasteventime = time(nullptr);
             ccon->state=EVIN;
 
-            struct epoll_event setevent { 0 };
-            setevent.events =  EPOLLIN | EPOLLET | EPOLLONESHOT;
-            setevent.data.ptr = ccon;
+            struct kevent setevent { 0 };
 
-            int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->fd(), &setevent);
+            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT, 0,0,ccon);
+
+            int estate = kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr);
 
             if ( estate < 0 ) {
                 char errstr[255];
@@ -198,7 +199,7 @@ namespace netplus {
         };
 
         void ReadEventHandler(int pos,const int tid,void *args) {
-            con *rcon = (con*)_Events[pos].data.ptr;
+            con *rcon = (con*)_Events[pos].udata;
 
             if(!rcon)
                 assert(0);
@@ -217,16 +218,16 @@ namespace netplus {
 
                 if(!rcon->SendData.empty()){
                     rcon->state=EVOUT;
-                    setpollEvents(rcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(rcon,EVFILT_WRITE | EV_DISPATCH | EV_ONESHOT);
                     return;
                 }
 
-                setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                setpollEvents(rcon,EVFILT_READ | EV_DISPATCH | EV_ONESHOT);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                      rcon->state=EVIN;
-                     setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                     setpollEvents(rcon,EVFILT_READ);
                      return;
                 }
                 throw e;
@@ -234,14 +235,14 @@ namespace netplus {
         };
 
         void WriteEventHandler(int pos,const int tid,void *args) {
-            con *wcon = (con*)_Events[pos].data.ptr;
+            con *wcon = (con*)_Events[pos].udata;
             try{
 
                 _evtapi->ResponseEvent(wcon,tid,args);
 
                 if(wcon->SendData.empty()){
                     wcon->state=EVIN;
-                    setpollEvents(wcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(wcon,EVFILT_READ);
                     return;
                 }
 
@@ -257,11 +258,11 @@ namespace netplus {
 
                 wcon->lasteventime = time(nullptr);
 
-                setpollEvents(wcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                setpollEvents(wcon,EVFILT_WRITE);
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                     wcon->state=EVOUT;
-                    setpollEvents(wcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(wcon,EVFILT_WRITE | EV_DISPATCH | EV_ONESHOT);
                     return;
                 }else{
                     throw e;
@@ -271,14 +272,17 @@ namespace netplus {
 
 
         void CloseEventHandler(int pos,const int tid,void *args) {
-            con *ccon = (con*)_Events[pos].data.ptr;
+            con *ccon = (con*)_Events[pos].udata;
 
             if(!ccon)
                 return;
 
             try{
+                struct kevent setevent { 0 };
 
-                if(epoll_ctl(_pollFD, EPOLL_CTL_DEL,ccon->csock->fd(), 0)<0){
+                EV_SET(&setevent,ccon->csock->fd(),0,EV_DELETE,0,0,nullptr);
+
+                if(kevent(_pollFD,&setevent,1,nullptr,0,nullptr)<0){
                     NetException except;
                     char errstr[255];
                     strerror_r_netplus(errno,errstr,255);
@@ -291,7 +295,7 @@ namespace netplus {
 
                 _evtapi->deleteConnetion(ccon);
 
-                _Events[pos].data.ptr=nullptr;
+                _Events[pos].udata=nullptr;
             }catch(NetException &e){
                 throw e;
             }
@@ -300,7 +304,7 @@ namespace netplus {
 
     private:
         int                  _pollFD;
-        struct epoll_event  *_Events;
+        struct kevent       *_Events;
         socket              *_ServerSocket;
         int                  _Timeout;
     };
@@ -426,21 +430,20 @@ EVENTLOOP:
 
         signal(SIGPIPE, SIG_IGN);
 
-        _pollFD = epoll_create1(0);
+        _pollFD = kqueue();
 
         if (_pollFD < 0) {
             exception[NetException::Critical] << "initEventHandler:" << "can't create epoll";
             throw exception;
         }
 
-        struct epoll_event setevent ={
+        struct kevent setevent ={
             0
         };
 
-        setevent.events = EPOLLIN | EPOLLET;
-        setevent.data.ptr = nullptr;
+        EV_SET(&setevent,_pollFD,EVFILT_READ,EV_ADD| EV_DISPATCH,0,0,nullptr);
 
-        if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,_ServerSocket->fd(),&setevent) < 0) {
+        if (kevent(_pollFD,&setevent,1,nullptr,0,nullptr) < 0) {
             exception[NetException::Critical] << "initEventHandler: can't create epoll";
             throw exception;
         }

@@ -14,11 +14,11 @@ else()
     )
 endif()
 
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
     list(APPEND netplussrc event/epoll.cpp)
-elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+elseif(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
     list(APPEND netplussrc event/iocp.cpp)
-elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Bsd")
+elseif("${CMAKE_HOST_SYSTEM_NAME}" MATCHES "BSD")
     list(APPEND netplussrc event/kqueue.cpp)
 else()
     list(APPEND netplussrc event/poll.cpp)
@@ -51,7 +51,7 @@ set(ConfigPackageLocation lib/cmake/libnetplus)
 
 export(EXPORT netplusTargets
   FILE "${CMAKE_CURRENT_BINARY_DIR}/libnetplusTargets.cmake"
-  NAMESPACE Upstream::
+  NAMESPACE netplus::
 )
 
 include(CMakePackageConfigHelpers)
@@ -65,7 +65,7 @@ install(EXPORT netplusTargets
   FILE
     libnetplusTargets.cmake
   NAMESPACE
-    Upstream::
+    netplus::
   DESTINATION
     ${ConfigPackageLocation}
 )
