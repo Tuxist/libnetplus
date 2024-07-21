@@ -119,16 +119,21 @@ namespace netplus {
 
         };
 
-        void setpollEvents(con* curcon,int events){
+        void setpollEvents(con* curcon,int filter,int events){
             NetException except;
             struct kevent setevent = { 0 };
 
-            EV_SET(&setevent,curcon->csock->fd(),events,EV_ADD | EV_ONESHOT,0,0,curcon);
+            EV_SET(&setevent,curcon->csock->fd(),filter,events,0,0,curcon);
 
             if ( kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr) < 0) {
                 except[NetException::Error] << "_setPollEvents: can change socket!";
                 throw except;
             }
+        }
+
+        void resetEventHandler(int pos){
+            con *rcon = (con*)_Events[pos].udata;
+            setpollEvents(rcon,EVFILT_READ,EV_ADD);
         }
 
         int pollState(int pos){
@@ -218,16 +223,16 @@ namespace netplus {
 
                 if(!rcon->SendData.empty()){
                     rcon->state=EVOUT;
-                    setpollEvents(rcon,EVFILT_WRITE | EV_ONESHOT);
+                    setpollEvents(rcon,EVFILT_WRITE,EV_ADD | EV_ONESHOT);
                     return;
                 }
 
-                setpollEvents(rcon,EVFILT_READ | EV_ONESHOT);
+                setpollEvents(rcon,EVFILT_READ,EV_ADD | EV_ONESHOT);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                      rcon->state=EVIN;
-                     setpollEvents(rcon,EVFILT_READ);
+                     setpollEvents(rcon,EVFILT_READ,EV_ADD | EV_ONESHOT);
                      return;
                 }
                 throw e;
@@ -242,7 +247,7 @@ namespace netplus {
 
                 if(wcon->SendData.empty()){
                     wcon->state=EVIN;
-                    setpollEvents(wcon,EVFILT_READ);
+                    setpollEvents(wcon,EVFILT_READ,EV_ADD | EV_ONESHOT);
                     return;
                 }
 
@@ -258,11 +263,11 @@ namespace netplus {
 
                 wcon->lasteventime = time(nullptr);
 
-                setpollEvents(wcon,EVFILT_WRITE);
+                setpollEvents(wcon,EVFILT_WRITE,EV_ADD | EV_ONESHOT);
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                     wcon->state=EVOUT;
-                    setpollEvents(wcon,EVFILT_WRITE | EV_ONESHOT);
+                    setpollEvents(wcon,EVFILT_WRITE,EV_ADD | EV_ONESHOT);
                     return;
                 }else{
                     throw e;
@@ -280,7 +285,7 @@ namespace netplus {
             try{
                 struct kevent setevent { 0 };
 
-                EV_SET(&setevent,ccon->csock->fd(),0,EV_DELETE,0,0,nullptr);
+                EV_SET(&setevent,ccon->csock->fd(),0,EV_CLEAR,0,0,nullptr);
 
                 if(kevent(_pollFD,&setevent,1,nullptr,0,nullptr)<0){
                     NetException except;
@@ -354,9 +359,8 @@ EVENTLOOP:
                                 pollptr.WriteEventHandler(i,tid,args);
                                 break;
                             default:
-                                NetException  e;
-                                e[NetException::Error] << "EventWorker: no known event !";
-                                throw e;
+                                pollptr.resetEventHandler(i);
+                                break;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
