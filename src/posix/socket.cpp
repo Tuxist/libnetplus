@@ -217,12 +217,10 @@ void netplus::tcp::bind(){
 unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
-#include <iostream>
+
 unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
-
-    std::cout << (unsigned int)csock->_SocketPtrSize <<std::endl;
 
     int rval=::sendto(csock->fd(),
                         data,
