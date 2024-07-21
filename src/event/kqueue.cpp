@@ -355,8 +355,7 @@ EVENTLOOP:
                                 break;
                             default:
                                 NetException  e;
-                                e[NetException::Error] << "EventWorker: Request type not kwon!";
-                                pollptr.CloseEventHandler(i,tid,args);
+                                e[NetException::Error] << "EventWorker: no known event !";
                                 throw e;
                         }
                     }catch(NetException& e){
