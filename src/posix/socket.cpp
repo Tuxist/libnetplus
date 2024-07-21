@@ -149,16 +149,16 @@ netplus::tcp::~tcp(){
 }
 
 netplus::tcp::tcp() {
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
+    _SocketPtr=::malloc(sizeof(struct sockaddr));
+    _SocketPtrSize=sizeof(struct sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);;
     _Type=sockettype::TCP;
 }
 
 netplus::tcp::tcp(int sock) {
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
+    _SocketPtr=::malloc(sizeof(struct sockaddr));
+    _SocketPtrSize=sizeof(struct sockaddr);
      ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=sock;
     _Type=sockettype::TCP;
@@ -189,9 +189,10 @@ int netplus::tcp::getMaxconnections(){
 
 void netplus::tcp::accept(socket *csock){
     NetException exception;
-    struct sockaddr myaddr;
-    socklen_t myaddrlen=sizeof(myaddr);
-    *csock=::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
+
+    *csock=::accept(_Socket,(struct sockaddr *)csock->_SocketPtr,
+                    &csock->_SocketPtrSize);
+
     if(csock->_Socket<0){
         int etype=NetException::Error;
         if(errno==EAGAIN)
@@ -202,9 +203,6 @@ void netplus::tcp::accept(socket *csock){
         exception[etype] << "Can't accept on Socket: " << errstr;
         throw exception;
     }
-    csock->_SocketPtrSize = myaddrlen;
-    csock->_SocketPtr = malloc(myaddrlen);
-    memcpy(csock->_SocketPtr,&myaddr,myaddrlen);
 }
 
 void netplus::tcp::bind(){
@@ -219,18 +217,20 @@ void netplus::tcp::bind(){
 unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
-
+#include <iostream>
 unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
-    int rval=::sendto(csock->_Socket,
+    std::cout << (unsigned int)csock->_SocketPtrSize <<std::endl;
+
+    int rval=::sendto(csock->fd(),
                         data,
                         size,
                         flags,
-                        (struct sockaddr *)&csock->_SocketPtr,
-                        csock->_SocketPtrSize
-                     );
+                        (struct sockaddr *)csock->_SocketPtr,
+                        sizeof(struct sockaddr)
+    );
     if(rval<0){
         int etype=NetException::Error;
         if(errno==EAGAIN)
@@ -254,11 +254,11 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
 
     NetException exception;
 
-    int recvsize=::recvfrom(csock->_Socket,
+    int recvsize=::recvfrom(csock->fd(),
                             data,
                             size,
                             flags,
-                            (struct sockaddr *)&csock->_SocketPtr,
+                            (struct sockaddr *)csock->_SocketPtr,
                             &csock->_SocketPtrSize
                          );
     if(recvsize<0){
@@ -277,6 +277,7 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
     }
     return recvsize;
 }
+
 void netplus::tcp::connect(socket *csock){
     NetException exception;
 
@@ -289,7 +290,6 @@ void netplus::tcp::connect(socket *csock){
         throw exception;
     }
 }
-
 
 void netplus::tcp::getAddress(std::string &addr){
     if(!_SocketPtr)

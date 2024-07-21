@@ -123,7 +123,7 @@ namespace netplus {
             NetException except;
             struct kevent setevent = { 0 };
 
-            EV_SET(&setevent,curcon->csock->fd(),events,EV_ADD | EV_DISPATCH| EV_ONESHOT,0,0,curcon);
+            EV_SET(&setevent,curcon->csock->fd(),events,EV_ADD | EV_ONESHOT,0,0,curcon);
 
             if ( kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr) < 0) {
                 except[NetException::Error] << "_setPollEvents: can change socket!";
@@ -163,6 +163,7 @@ namespace netplus {
             }
 
             _evtapi->CreateConnetion(&ccon);
+
             if(_ServerSocket->_Type==sockettype::TCP){
                 ccon->csock=new tcp();
             }else if(_ServerSocket->_Type==sockettype::UDP){
@@ -174,7 +175,6 @@ namespace netplus {
             _ServerSocket->accept(ccon->csock);
             ccon->csock->setnonblocking();
 
-
             std::string ip;
             ccon->csock->getAddress(ip);
             std::cout << "Connected: " << ip  << std::endl;
@@ -184,7 +184,7 @@ namespace netplus {
 
             struct kevent setevent { 0 };
 
-            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_DISPATCH | EV_ONESHOT,0,0,ccon);
+            EV_SET(&setevent, ccon->csock->fd(), EVFILT_READ, EV_ADD | EV_ONESHOT,0,0,ccon);
 
             int estate = kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr);
 
@@ -218,11 +218,11 @@ namespace netplus {
 
                 if(!rcon->SendData.empty()){
                     rcon->state=EVOUT;
-                    setpollEvents(rcon,EVFILT_WRITE | EV_DISPATCH | EV_ONESHOT);
+                    setpollEvents(rcon,EVFILT_WRITE | EV_ONESHOT);
                     return;
                 }
 
-                setpollEvents(rcon,EVFILT_READ | EV_DISPATCH | EV_ONESHOT);
+                setpollEvents(rcon,EVFILT_READ | EV_ONESHOT);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
@@ -262,7 +262,7 @@ namespace netplus {
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                     wcon->state=EVOUT;
-                    setpollEvents(wcon,EVFILT_WRITE | EV_DISPATCH | EV_ONESHOT);
+                    setpollEvents(wcon,EVFILT_WRITE | EV_ONESHOT);
                     return;
                 }else{
                     throw e;
