@@ -132,6 +132,11 @@ namespace netplus {
             }
         }
 
+        void resetEventHandler(int pos){
+            con *rcon = (con*)_Events[pos].data.ptr;
+            setpollEvents(rcon, EPOLLIN | EPOLLET);
+        }
+
         int pollState(int pos){
             con *pcon = (con*)_Events[pos].data.ptr;
             NetException exception;
@@ -352,10 +357,8 @@ EVENTLOOP:
                                 pollptr.WriteEventHandler(i,tid,args);
                                 break;
                             default:
-                                NetException  e;
-                                e[NetException::Error] << "EventWorker: Request type not kwon!";
-                                pollptr.CloseEventHandler(i,tid,args);
-                                throw e;
+                                pollptr.resetEventHandler(i);
+                                break;
                         }
                     }catch(NetException& e){
                         switch(e.getErrorType()){
