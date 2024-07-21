@@ -111,7 +111,7 @@ namespace netplus {
 
         /*basic functions*/
         const char* getpolltype() {
-            return "EPOLL";
+            return "KQUEUE";
         }
 
         /*event handler function*/
@@ -126,7 +126,7 @@ namespace netplus {
             EV_SET(&setevent,curcon->csock->fd(),events,EV_ADD | EV_DISPATCH| EV_ONESHOT,0,0,curcon);
 
             if ( kevent(_pollFD, &setevent, 1, nullptr, 0, nullptr) < 0) {
-                except[NetException::Error] << "_setEpollEvents: can change socket!";
+                except[NetException::Error] << "_setPollEvents: can change socket!";
                 throw except;
             }
         }
@@ -149,7 +149,7 @@ namespace netplus {
                 char str[255];
                 strerror_r_netplus(errno,str,255);
 
-                exception[NetException::Error] << "waitEventHandler: epoll wait failure: " << str;
+                exception[NetException::Error] << "waitEventHandler: kqueue wait failure: " << str;
                 throw exception;
             }
             return evn;
@@ -191,7 +191,7 @@ namespace netplus {
             if ( estate < 0 ) {
                 char errstr[255];
                 strerror_r_netplus(errno,errstr,255);
-                exception[NetException::Error] << "ConnectEventHandler: can't add socket to epoll: " << errstr;
+                exception[NetException::Error] << "ConnectEventHandler: can't add socket to kqueue: " << errstr;
                 throw exception;
             }
             _evtapi->ConnectEvent(ccon,tid,args);
@@ -286,7 +286,7 @@ namespace netplus {
                     NetException except;
                     char errstr[255];
                     strerror_r_netplus(errno,errstr,255);
-                    except[NetException::Error] << "CloseEventHandler: can't close socket to epoll: " << errstr;
+                    except[NetException::Error] << "CloseEventHandler: can't close socket to kqueue: " << errstr;
                     throw except;
                 }
                  delete  ccon->csock;
@@ -433,7 +433,7 @@ EVENTLOOP:
         _pollFD = kqueue();
 
         if (_pollFD < 0) {
-            exception[NetException::Critical] << "initEventHandler:" << "can't create epoll";
+            exception[NetException::Critical] << "initEventHandler:" << "can't create kqueue";
             throw exception;
         }
 
@@ -444,7 +444,7 @@ EVENTLOOP:
         EV_SET(&setevent,_pollFD,EVFILT_READ,EV_ADD| EV_DISPATCH,0,0,nullptr);
 
         if (kevent(_pollFD,&setevent,1,nullptr,0,nullptr) < 0) {
-            exception[NetException::Critical] << "initEventHandler: can't create epoll";
+            exception[NetException::Critical] << "initEventHandler: can't create kqueue";
             throw exception;
         }
 
