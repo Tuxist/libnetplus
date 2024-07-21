@@ -433,7 +433,9 @@ EVENTLOOP:
         _pollFD = kqueue();
 
         if (_pollFD < 0) {
-            exception[NetException::Critical] << "initEventHandler:" << "can't create kqueue";
+            char errstr[255];
+            strerror_r_netplus(errno,errstr,255);
+            exception[NetException::Critical] << "initEventHandler:" << "can't create kqueue: " << errstr;
             throw exception;
         }
 
@@ -441,7 +443,7 @@ EVENTLOOP:
             0
         };
 
-        EV_SET(&setevent,_pollFD,EVFILT_READ,EV_ADD| EV_DISPATCH | EV_CLEAR,NOTE_WRITE,0,nullptr);
+        EV_SET(&setevent,_ServerSocket->fd(),EVFILT_READ,EV_ADD | EV_CLEAR | EV_ONESHOT,0,0,nullptr);
 
         if (kevent(_pollFD,&setevent,1,nullptr,0,nullptr) < 0) {
             char errstr[255];
