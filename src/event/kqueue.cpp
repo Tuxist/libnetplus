@@ -142,7 +142,7 @@ namespace netplus {
         }
 
         int waitEventHandler() {
-            int evn = kevent(_pollFD,_Events,0,nullptr,_ServerSocket->getMaxconnections(),nullptr);
+            int evn = kevent(_pollFD,nullptr,0,_Events,_ServerSocket->getMaxconnections(),nullptr);
             if (evn < 0 ) {
                 NetException exception;
 
