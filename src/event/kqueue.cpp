@@ -131,11 +131,6 @@ namespace netplus {
             }
         }
 
-        void resetEventHandler(int pos){
-            con *rcon = (con*)_Events[pos].udata;
-            setpollEvents(rcon,EVFILT_READ,EV_ADD);
-        }
-
         int pollState(int pos){
             con *pcon = (con*)_Events[pos].udata;
             NetException exception;
@@ -360,8 +355,7 @@ EVENTLOOP:
                                 break;
                             default:
                                 NetException  e;
-                                e[NetException::Error] << "EventWorker: Request type not kwon!";
-                                pollptr.CloseEventHandler(i,tid,args);
+                                e[NetException::Error] << "EventWorker: no known event !";
                                 throw e;
                         }
                     }catch(NetException& e){
@@ -369,9 +363,6 @@ EVENTLOOP:
                             case NetException::Critical:
                                 throw e;
                             case NetException::Note:
-                                break;
-                            case NetException::Close:
-                                pollptr.CloseEventHandler(i,tid,args);
                                 break;
                             default:
                                 std::cerr << e.what() << std::endl;
