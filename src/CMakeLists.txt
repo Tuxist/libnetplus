@@ -4,8 +4,6 @@ list(APPEND netplussrc
     ssl.cpp
 )
 
-echo 
-
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     list(APPEND netplussrc
         windows/socket.cpp
