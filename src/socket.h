@@ -164,9 +164,4 @@ namespace netplus {
             int                      _Port;
             char                     _Addr[255];
         };
-
-        class quick : public socket{
-        public:
-            quick&       operator=(int socket);
-        };
 };
