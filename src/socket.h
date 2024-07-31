@@ -31,7 +31,7 @@
 #pragma once
 
 #ifndef SOCKET  
-#define SOCKET int;
+typedef int SOCKET;
 #endif
 
 namespace netplus {

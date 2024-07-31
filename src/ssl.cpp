@@ -1,5 +1,4 @@
 #include <cstring>
-#include <winsock.h>
 
 #include "exception.h"
 #include "socket.h"
