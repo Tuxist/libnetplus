@@ -33,14 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/un.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netdb.h>
+#include <winsock.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "exception.h"
 #include "socket.h"

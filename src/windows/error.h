@@ -25,38 +25,14 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include <chrono>
-#include <thread>
-#include <cstring>
+#pragma once
 
-#include <vector>
-#include <cstdio>
-#include <cstring>
-#include <fcntl.h>
-#include <winsock.h>
+#include <stdio.h>
+#include <errno.h>
 #include <string.h>
 
-#include "exception.h"
-#include "socket.h"
-#include "error.h"
-
-#define HIDDEN __attribute__ ((visibility ("hidden")))
-
-netplus::socket::socket(){
-    _Socket=-1;
-    _SocketPtr=nullptr;
-    _Type=-1;
-}
-
-netplus::socket::~socket(){
-}
-
-void netplus::socket::setnonblocking(){
-    u_long mode = 1; // 1 to enable non-blocking socket
-    if(ioctlsocket(_Socket, FIONBIO, &mode) <0){
-        NetException exception;
-        exception[NetException::Error] << "Could not set ClientSocket nonblocking!";
-        throw exception;
+namespace netplus {
+    inline void strerror_r_netplus(int err, char *str, size_t str_len){
+        strerror_s(str,str_len,err);
     }
-}
-
+};

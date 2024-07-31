@@ -30,6 +30,10 @@
 
 #pragma once
 
+#ifndef SOCKET  
+#define SOCKET int;
+#endif
+
 namespace netplus {
         enum sockettype {TCP=0,UDP=1,SSL=2};
 
@@ -59,7 +63,7 @@ namespace netplus {
 
             void               *_SocketPtr;
             unsigned int        _SocketPtrSize;
-            int                 _Socket;
+            SOCKET              _Socket;
             int                 _Type;
             void               *_Extension;
         };

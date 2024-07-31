@@ -33,14 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/un.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netdb.h>
+#include <winsock.h>
 #include <string.h>
-#include <pthread.h>
 
 #include "exception.h"
 #include "socket.h"
@@ -48,27 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) {
     NetException exception;
-    int optval = 1;
-    if(sockopts == -1)
-        sockopts=SO_REUSEADDR;
-    _Maxconnections=maxconnections;
-    _SocketPtr = new struct sockaddr_un;
-    memset(_SocketPtr,0,sizeof(struct sockaddr_un));
-    ((struct sockaddr_un *)_SocketPtr)->sun_family = AF_UNIX;
-    if(!uxsocket){
-        exception[NetException::Critical] << "Can't copy Server UnixSocket";
-        throw exception;
-    }
-    _UxPath=uxsocket;
-    memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
-
-    if ((_Socket=::socket(AF_UNIX,SOCK_STREAM, 0)) < 0){
-        exception[NetException::Critical] << "Can't create TCP UnixSocket";
-        throw exception;
-    }
-    _SocketPtrSize=sizeof(sockaddr_un);
-    setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    _Type=sockettype::TCP;
+    exception[NetException::Critical] << "tcp: Windows doesn't support UnixSockets !";
+    throw exception;
 }
 
 netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) {

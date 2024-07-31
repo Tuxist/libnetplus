@@ -25,6 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <algorithm>
+#include <iterator>
 #include <cstring>
 
 #include "socket.h"
