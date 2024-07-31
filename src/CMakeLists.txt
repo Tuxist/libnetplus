@@ -7,10 +7,14 @@ list(APPEND netplussrc
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     list(APPEND netplussrc
         windows/socket.cpp
+        windows/udp.cpp
+        windows/tcp.cpp
     )
 else()
     list(APPEND netplussrc
         posix/socket.cpp
+        posix/udp.cpp
+        posix/tcp.cpp
     )
 endif()
 
