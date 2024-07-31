@@ -50,28 +50,8 @@ netplus::udp::udp() {
 
 netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) {
     NetException exception;
-    int optval = 1;
-    if(sockopts == -1)
-        sockopts=SO_REUSEADDR;
-    _Maxconnections=maxconnections;
-
-    _SocketPtr = new struct sockaddr_un;
-    memset(_SocketPtr,0,sizeof(struct sockaddr_un));
-    ((struct sockaddr_un *)_SocketPtr)->sun_family = AF_UNIX;
-    if(!uxsocket){
-        exception[NetException::Critical] << "Can't copy Server UnixSocket";
-        throw exception;
-    }
-    _UxPath=uxsocket;
-    memcpy(((struct sockaddr_un *)_SocketPtr)->sun_path,uxsocket,strlen(uxsocket)+1);
-
-    if ((_Socket=::socket(AF_UNIX,SOCK_DGRAM, IPPROTO_UDP)) < 0){
-        exception[NetException::Critical] << "Can't create UDP UnixSocket";
-        throw exception;
-    }
-    _SocketPtrSize=sizeof(sockaddr_un);
-    setsockopt(_Socket,SOL_SOCKET,sockopts,&optval, sizeof(optval));
-    _Type=sockettype::UDP;
+    exception[NetException::Critical] << "udp: Windows doesn't support UnixSockets !";
+    throw exception;
 }
 
 netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
