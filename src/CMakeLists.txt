@@ -36,21 +36,29 @@ include_directories(
 
 add_library(netplus SHARED ${netplussrc})
 
-target_link_libraries(netplus) #PUBLIC MbedTLS::mbedcrypto MbedTLS::mbedtls MbedTLS::mbedx509)
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+   target_link_libraries(netplus)
+else()
+   target_link_libraries(netplus pthread) #PUBLIC MbedTLS::mbedcrypto MbedTLS::mbedtls MbedTLS::mbedx509)
+endif()
 
 set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING cryptplus_MAJOR_VERSION)
 
-install(TARGETS netplus DESTINATION lib EXPORT netplusTargets)
+install(TARGETS netplus EXPORT netplusTargets 
+	DESTINATION lib 
+	INCLUDES DESTINATION include
+)
 
 install(FILES
     socket.h
     exception.h
     eventapi.h
     connection.h
-DESTINATION include/netplus)
+DESTINATION include/netplus
+)
 
 set(ConfigPackageLocation lib/cmake/libnetplus)
 
