@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
 #include <chrono>
-#include <thread>
+#include <atomic>
 #include <cstring>
 
 #include <vector>
@@ -40,15 +40,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 #include "error.h"
 
+#include "config.h"
+
 #define HIDDEN __attribute__ ((visibility ("hidden")))
+
+WSADATA* netplus::socket::_WSAData = nullptr;
+
+namespace netplus {
+    std::atomic<int> _Instance;
+};
 
 netplus::socket::socket(){
     _Socket=-1;
     _SocketPtr=nullptr;
     _Type=-1;
+    ++_Instance;
+    if (!_WSAData) {
+        if (WSAStartup(MAKEWORD(2, 2), _WSAData) != 0) {
+            NetException exception;
+            exception[NetException::Critical] << "udp: WSAStartup failed: ";
+        }
+    }
 }
 
 netplus::socket::~socket(){
+    --_Instance;
+    int zero = 0;
+    if (_Instance.compare_exchange_strong(zero, std::memory_order_release)) {
+        WSACleanup();
+        delete _WSAData;
+        _WSAData = nullptr;
+    }
 }
 
 void netplus::socket::setnonblocking(){

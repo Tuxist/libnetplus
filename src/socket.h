@@ -73,9 +73,8 @@ namespace netplus {
             int                 _Type;
             void               *_Extension;
 #ifdef Windows
-            WSADATA             _WSAData;
+            static WSADATA     *_WSAData;
 #endif // Windows
-
         };
         
         class tcp : public socket{

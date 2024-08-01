@@ -42,13 +42,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 #include "error.h"
 
+#include "config.h"
+
 netplus::udp::udp() {
     _SocketPtr=::malloc(sizeof(addrinfo));
     _SocketPtrSize=sizeof(addrinfo);
-    if (WSAStartup(MAKEWORD(2, 2),&_WSAData) != 0) {
-        NetException exception;
-        exception[NetException::Critical] << "udp: WSAStartup failed: ";
-    }
     _Socket = INVALID_SOCKET;
     _Type=sockettype::UDP;
 }
@@ -66,7 +64,6 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
         sockopts=SO_REUSEADDR;
 
     struct addrinfo hints,*result,*rp;
-
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -102,8 +99,9 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
 }
 
 netplus::udp::~udp(){
+
     if(_Socket>=0)
-        ::close(_Socket);
+        ::closesocket(_Socket);
     ::free(_SocketPtr);
 }
 
@@ -167,7 +165,7 @@ unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long siz
 unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int rval=::send(csock->_Socket,
-                        data,
+                 (char*)data,
                         size,
                         flags
                      );
@@ -195,7 +193,7 @@ unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long siz
 unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int recvsize=::recv(csock->_Socket,
-                            data,
+                            (char*)data,
                             size,
                             flags
                          );
