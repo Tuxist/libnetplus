@@ -51,12 +51,12 @@ int netplus::ssl::getMaxconnections(){
     return _Maxconnections;
 }
 
-unsigned int netplus::ssl::sendData(socket *csock,void *data,unsigned long size){
+size_t netplus::ssl::sendData(socket *csock,void *data,unsigned long size){
     NetException exception;
     return 0;
 }
 
-unsigned int netplus::ssl::recvData(socket *csock,void *data,unsigned long size){
+size_t netplus::ssl::recvData(socket *csock,void *data,unsigned long size){
     return 0;
 }
 

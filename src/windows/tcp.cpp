@@ -32,9 +32,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 
-#include <windows.h>
-#include <winsock2.h>
-#include <fcntl.h>
+extern "C" {
+    #include <winsock2.h>
+    #include <WS2tcpip.h>
+    #include <fcntl.h>
+};
 
 #include "exception.h"
 #include "socket.h"
@@ -104,10 +106,10 @@ netplus::tcp::~tcp(){
 }
 
 netplus::tcp::tcp() {
-    _SocketPtr=::malloc(sizeof(addrinfo));
-    _SocketPtrSize=sizeof(addrinfo);
-    ((struct addrinfo*)_SocketPtr)->ai_family=AF_UNSPEC;
-    _Socket=::socket(((struct addrinfo*)_SocketPtr)->ai_family,SOCK_STREAM,0);;
+    _SocketPtr=::malloc(sizeof(sockaddr));
+    _SocketPtrSize=sizeof(sockaddr);
+    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
+    _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
     _Type=sockettype::TCP;
 }
 
@@ -146,7 +148,7 @@ void netplus::tcp::accept(socket *csock){
     NetException exception;
     struct addrinfo myaddr;
     socklen_t myaddrlen=sizeof(myaddr);
-    *csock=::accept(_Socket,(struct addrinfo *)&myaddr,&myaddrlen);
+    *csock=::accept(_Socket,(struct sockaddr*)&myaddr,&myaddrlen);
     if(csock->_Socket<0){
         int etype=NetException::Error;
         if(errno==EAGAIN)
@@ -164,19 +166,18 @@ void netplus::tcp::accept(socket *csock){
 
 void netplus::tcp::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct addrinfo *)_SocketPtr)->ai_addr,
-        ((const struct addrinfo*)_SocketPtr)->ai_addrlen) < 0){
+    if (::bind(_Socket,(const struct sockaddr *)_SocketPtr, _SocketPtrSize) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
 }
 
 
-unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
+size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -184,7 +185,7 @@ unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long siz
                  (char*)data,
                         size,
                         flags,
-                        (struct addrinfo *)&csock->_SocketPtr,
+                        (struct sockaddr*)csock->_SocketPtr,
                         csock->_SocketPtrSize
                      );
     if(rval<0){
@@ -194,19 +195,19 @@ unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long siz
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 
-        exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket senddata failed on Socket: " << (size_t) csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
-    return rval;
+    return (size_t)rval;
 }
 
 
-unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size){
+size_t netplus::tcp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -214,8 +215,8 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
                      (char*)data,
                             size,
                             flags,
-                            (struct addrinfo *)csock->_SocketPtr,
-                            csock->_SocketPtrSize
+                            (struct sockaddr*)csock->_SocketPtr,
+                            (int*)csock->_SocketPtrSize
                          );
     if(recvsize<0){
         int etype=NetException::Error;
@@ -227,16 +228,16 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 
-        exception[etype] << "Socket recvdata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket recvdata failed on Socket: " << (size_t) csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
-    return recvsize;
+    return (size_t)recvsize;
 }
 void netplus::tcp::connect(socket *csock){
     NetException exception;
 
-    if ( ::connect(csock->_Socket,(struct addrinfo*)csock->_SocketPtr,csock->_SocketPtrSize) < 0) {
+    if ( ::connect(csock->_Socket,(struct sockaddr*)csock->_SocketPtr,csock->_SocketPtrSize) < 0) {
 
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
@@ -248,12 +249,12 @@ void netplus::tcp::connect(socket *csock){
 
 
 void netplus::tcp::getAddress(std::string &addr){
-    //if(!_SocketPtr)
-    //    return;
-    //char ipaddr[INET6_ADDRSTRLEN];
-    //if(((struct addrinfo*)_SocketPtr)->sa_family==AF_INET6)
-    //    inet_ntop(AF_INET6, &(((struct addrinfo_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
-    //else
-    //    inet_ntop(AF_INET, &((struct addrinfo_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
-    //addr=ipaddr;
+    if(!_SocketPtr)
+        return;
+    char ipaddr[INET6_ADDRSTRLEN];
+    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+       inet_ntop(AF_INET6,& ((struct sockaddr*)_SocketPtr)->sa_data, ipaddr, INET6_ADDRSTRLEN);
+    else
+       inet_ntop(AF_INET, &((struct sockaddr*)_SocketPtr)->sa_data, ipaddr, INET_ADDRSTRLEN);
+    addr=ipaddr;
 }

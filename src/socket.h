@@ -56,8 +56,8 @@ namespace netplus {
             
             virtual int          getMaxconnections()=0;
             
-            virtual unsigned int sendData(socket *csock,void *data,unsigned long size)=0;
-            virtual unsigned int recvData(socket *csock,void *data,unsigned long size)=0;
+            virtual size_t       sendData(socket *csock,void *data,unsigned long size)=0;
+            virtual size_t       recvData(socket *csock,void *data,unsigned long size)=0;
             
             virtual void         connect(socket *csock)=0;
 
@@ -65,10 +65,10 @@ namespace netplus {
 
             virtual int          fd()=0;
 
-            virtual socket&      operator=(int sock)=0;
+            virtual socket&      operator=(SOCKET sock)=0;
 
             void               *_SocketPtr;
-            unsigned int        _SocketPtrSize;
+            size_t              _SocketPtrSize;
             SOCKET              _Socket;
             int                 _Type;
             void               *_Extension;
@@ -95,10 +95,10 @@ namespace netplus {
 
             int           getMaxconnections();
             
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+            size_t sendData(socket *socket,void *data,unsigned long size);
+            size_t sendData(socket *socket,void *data,unsigned long size,int flags);
+            size_t recvData(socket *socket,void *data,unsigned long size);
+            size_t recvData(socket *socket,void *data,unsigned long size,int flags);
 
             virtual void connect(socket *csock);
 
@@ -128,10 +128,10 @@ namespace netplus {
 
             int           getMaxconnections();
 
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int sendData(socket *socket,void *data,unsigned long size,int flags);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size,int flags);
+            size_t sendData(socket *socket,void *data,unsigned long size);
+            size_t sendData(socket *socket,void *data,unsigned long size,int flags);
+            size_t recvData(socket *socket,void *data,unsigned long size);
+            size_t recvData(socket *socket,void *data,unsigned long size,int flags);
 
             void connect(socket *csock);
 
@@ -160,8 +160,8 @@ namespace netplus {
             ssl&          operator=(int socket);
             int           getMaxconnections();
             
-            unsigned int sendData(socket *socket,void *data,unsigned long size);
-            unsigned int recvData(socket *socket,void *data,unsigned long size);
+            size_t        sendData(socket *socket,void *data,unsigned long size);
+            size_t        recvData(socket *socket,void *data,unsigned long size);
             
             void connect(socket *csock);
 

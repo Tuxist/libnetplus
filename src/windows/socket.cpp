@@ -39,7 +39,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "error.h"
 
 #include "config.h"
-#include <windows.h>
+
+extern "C" {
+    #include <winsock2.h>
+};
 
 //#define HIDDEN __attribute__ ((visibility ("hidden")))
 

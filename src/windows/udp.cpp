@@ -31,9 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <cstdio>
 
-#include <windows.h>
-#include <winsock2.h>
-#include <fcntl.h>
+extern "C" {
+    #include <winsock2.h>
+    #include <WS2tcpip.h>
+    #include <fcntl.h>
+};
 
 #include "exception.h"
 #include "socket.h"
@@ -134,7 +136,7 @@ int netplus::udp::getMaxconnections(){
 
 void netplus::udp::accept(socket *csock){
     NetException exception;
-    struct addrinfo myaddr;
+    struct sockaddr myaddr;
     socklen_t myaddrlen;
     *csock = ::accept(_Socket, &myaddr, &myaddrlen);
     if(csock->_Socket<0){
@@ -148,19 +150,18 @@ void netplus::udp::accept(socket *csock){
 
 void netplus::udp::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct addrinfo*)_SocketPtr)->ai_addr, 
-        ((const struct addrinfo*)_SocketPtr)->ai_addrlen) < 0){
+    if (::bind(_Socket,(const struct sockaddr*)_SocketPtr,_SocketPtrSize) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
 }
 
 
-unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size){
+size_t netplus::udp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int rval=::send(csock->_Socket,
                  (char*)data,
@@ -175,20 +176,20 @@ unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long siz
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 
-        exception[etype] << "Socket senddata failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket senddata failed on Socket: " << (size_t)csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
 
         throw exception;
     }
-    return rval;
+    return (size_t)rval;
 }
 
 
-unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size){
+size_t netplus::udp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int recvsize=::recv(csock->_Socket,
                             (char*)data,
@@ -204,11 +205,11 @@ unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long siz
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 
-        exception[etype] << "Socket recvData failed on Socket: " << csock->_Socket
+        exception[etype] << "Socket recvData failed on Socket: " << (size_t) csock->_Socket
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
-    return recvsize;
+    return (size_t)recvsize;
 }
 
 void netplus::udp::connect(socket *csock){
@@ -224,14 +225,14 @@ void netplus::udp::connect(socket *csock){
 }
 
 void netplus::udp::getAddress(std::string &addr){
-    //if(!_SocketPtr)
-    //    return;
-    //char ipaddr[INET6_ADDRSTRLEN];
-    //if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
-    //    inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
-    //else
-    //    inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
-    //addr=ipaddr;
+    if(!_SocketPtr)
+       return;
+    char ipaddr[INET6_ADDRSTRLEN];
+    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    else
+        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
+    addr=ipaddr;
 }
 
 
