@@ -209,7 +209,7 @@ size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int 
                         size,
                         flags,
                         (struct sockaddr *)&csock->_SocketPtr,
-                        csock->_SocketPtrSize
+                        sizeof(struct sockaddr)
                      );
     if(rval<0){
         int etype=NetException::Error;
