@@ -196,11 +196,11 @@ void netplus::tcp::bind(){
 }
 
 
-unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
+size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -226,11 +226,11 @@ unsigned int netplus::tcp::sendData(socket *csock, void* data, unsigned long siz
 }
 
 
-unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size){
+size_t netplus::tcp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int flags){
 
     NetException exception;
 
@@ -238,8 +238,8 @@ unsigned int netplus::tcp::recvData(socket *csock, void* data, unsigned long siz
                             data,
                             size,
                             flags,
-                            (struct sockaddr *)&csock->_SocketPtr,
-                            &csock->_SocketPtrSize
+                            (struct sockaddr *)csock->_SocketPtr,
+                            (socklen_t*)&csock->_SocketPtrSize
                          );
     if(recvsize<0){
         int etype=NetException::Error;

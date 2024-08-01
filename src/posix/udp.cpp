@@ -185,11 +185,11 @@ void netplus::udp::bind(){
 }
 
 
-unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size){
+size_t netplus::udp::sendData(socket *csock, void* data, unsigned long size){
     return sendData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::udp::sendData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int rval=::send(csock->_Socket,
                         data,
@@ -213,11 +213,11 @@ unsigned int netplus::udp::sendData(socket *csock, void* data, unsigned long siz
 }
 
 
-unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size){
+size_t netplus::udp::recvData(socket *csock, void* data, unsigned long size){
     return recvData(csock,data,size,0);
 }
 
-unsigned int netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
+size_t netplus::udp::recvData(socket *csock, void* data, unsigned long size,int flags){
     NetException exception;
     int recvsize=::recv(csock->_Socket,
                             data,
