@@ -208,7 +208,7 @@ size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int 
                         data,
                         size,
                         flags,
-                        (struct sockaddr *)&csock->_SocketPtr,
+                        (struct sockaddr *)csock->_SocketPtr,
                         sizeof(struct sockaddr)
                      );
     if(rval<0){
