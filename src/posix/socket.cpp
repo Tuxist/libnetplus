@@ -65,7 +65,3 @@ void netplus::socket::setnonblocking(){
         throw exception;
     }
 }
-
-
-return _Socket;
-}
