@@ -33,18 +33,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <winsock.h>
-#include <string.h>
 
 #include "exception.h"
 #include "socket.h"
 #include "error.h"
 
 #include "config.h"
+#include <windows.h>
 
-#define HIDDEN __attribute__ ((visibility ("hidden")))
+//#define HIDDEN __attribute__ ((visibility ("hidden")))
 
 WSADATA* netplus::socket::_WSAData = nullptr;
+
+
+#define WIN32_LEAN_AND_MEAN
+
+#pragma comment (lib, "Ws2_32.lib")
 
 namespace netplus {
     std::atomic<int> _Instance;

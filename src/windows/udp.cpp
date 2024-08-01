@@ -27,16 +27,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <chrono>
 #include <thread>
-#include <cstring>
-
 #include <vector>
-#include <cstdio>
 #include <cstring>
-#include <fcntl.h>
+#include <cstdio>
+
 #include <windows.h>
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#include <string.h>
+#include <fcntl.h>
 
 #include "exception.h"
 #include "socket.h"
@@ -95,7 +92,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
         break;
     }
 
-    ::freeaddrinfo(result);
+    freeaddrinfo(result);
 }
 
 netplus::udp::~udp(){
@@ -106,9 +103,9 @@ netplus::udp::~udp(){
 }
 
 netplus::udp::udp(int sock){
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
-    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
+    _SocketPtr=::malloc(sizeof(addrinfo));
+    _SocketPtrSize=sizeof(addrinfo);
+    ((struct addrinfo*)_SocketPtr)->ai_family=AF_UNSPEC;
     _Socket=sock;
     _Type=sockettype::UDP;
 }
@@ -137,9 +134,9 @@ int netplus::udp::getMaxconnections(){
 
 void netplus::udp::accept(socket *csock){
     NetException exception;
-    struct sockaddr_storage myaddr;
+    struct addrinfo myaddr;
     socklen_t myaddrlen;
-    *csock = ::accept(_Socket,(struct sockaddr *)&myaddr,&myaddrlen);
+    *csock = ::accept(_Socket, &myaddr, &myaddrlen);
     if(csock->_Socket<0){
         exception[NetException::Error] << "Can't accept on Socket";
         throw exception;
@@ -151,7 +148,8 @@ void netplus::udp::accept(socket *csock){
 
 void netplus::udp::bind(){
     NetException exception;
-    if (::bind(_Socket,((const struct sockaddr *)_SocketPtr), _SocketPtrSize) < 0){
+    if (::bind(_Socket,((const struct addrinfo*)_SocketPtr)->ai_addr, 
+        ((const struct addrinfo*)_SocketPtr)->ai_addrlen) < 0){
         exception[NetException::Error] << "Can't bind Server Socket";
         throw exception;
     }
@@ -226,14 +224,14 @@ void netplus::udp::connect(socket *csock){
 }
 
 void netplus::udp::getAddress(std::string &addr){
-    if(!_SocketPtr)
-        return;
-    char ipaddr[INET6_ADDRSTRLEN];
-    if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
-        inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
-    else
-        inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
-    addr=ipaddr;
+    //if(!_SocketPtr)
+    //    return;
+    //char ipaddr[INET6_ADDRSTRLEN];
+    //if(((struct sockaddr*)_SocketPtr)->sa_family==AF_INET6)
+    //    inet_ntop(AF_INET6, &(((struct sockaddr_in6*)_SocketPtr)->sin6_addr), ipaddr, INET6_ADDRSTRLEN);
+    //else
+    //    inet_ntop(AF_INET, &((struct sockaddr_in*)_SocketPtr)->sin_addr, ipaddr, INET_ADDRSTRLEN);
+    //addr=ipaddr;
 }
 
 
