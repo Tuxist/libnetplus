@@ -1,0 +1,2 @@
+#define ${CMAKE_SYSTEM_NAME}
+#define ARCH_${CMAKE_SYSTEM_PROCESSOR}

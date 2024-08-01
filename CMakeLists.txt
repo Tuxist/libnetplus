@@ -28,4 +28,17 @@ if(${DEBUG} MATCHES TRUE)
     add_definitions(-DDEBUG)
 endif()
 
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+include_directories(
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+install(
+    FILES 
+        "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    DESTINATION 
+        include/netplus
+)
+
 add_subdirectory(src)

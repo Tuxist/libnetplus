@@ -28,7 +28,13 @@
 #include <memory>
 #include <string>
 
+#include "config.h"
+
 #pragma once
+
+#ifdef Windows
+#include <Windows.h>
+#endif //Windows
 
 #ifndef SOCKET  
 typedef int SOCKET;
@@ -66,6 +72,10 @@ namespace netplus {
             SOCKET              _Socket;
             int                 _Type;
             void               *_Extension;
+#ifdef Windows
+            WSADATA             _WSAData;
+#endif // Windows
+
         };
         
         class tcp : public socket{

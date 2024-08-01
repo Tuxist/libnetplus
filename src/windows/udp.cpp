@@ -33,7 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <winsock.h>
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <string.h>
 
 #include "exception.h"
@@ -41,10 +43,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "error.h"
 
 netplus::udp::udp() {
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
-    ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
-    _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_DGRAM,0);
+    _SocketPtr=::malloc(sizeof(addrinfo));
+    _SocketPtrSize=sizeof(addrinfo);
+    if (WSAStartup(MAKEWORD(2, 2),&_WSAData) != 0) {
+        NetException exception;
+        exception[NetException::Critical] << "udp: WSAStartup failed: ";
+    }
+    _Socket = INVALID_SOCKET;
     _Type=sockettype::UDP;
 }
 
@@ -72,7 +77,7 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
 
-    int tsock;
+    SOCKET tsock;
     char serv[512];
     snprintf(serv,512,"%d",port);
 
@@ -94,10 +99,6 @@ netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
     }
 
     ::freeaddrinfo(result);
-
-    int optval = 1;
-    setsockopt(_Socket, SOL_SOCKET, sockopts,&optval,sizeof(optval));
-    _Type=sockettype::UDP;
 }
 
 netplus::udp::~udp(){
