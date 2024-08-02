@@ -32,12 +32,10 @@
 
 #pragma once
 
-#ifdef Windows
-#include <Windows.h>
-#endif //Windows
-
-#ifndef SOCKET  
+#ifndef Windows  
 typedef int SOCKET;
+#else
+#include <winsock.h>
 #endif
 
 namespace netplus {
@@ -73,7 +71,7 @@ namespace netplus {
             int                 _Type;
             void               *_Extension;
 #ifdef Windows
-            static WSADATA     *_WSAData;
+            WSAData            *_WSAData;
 #endif // Windows
         };
         

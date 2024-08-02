@@ -29,6 +29,9 @@
 #include <memory>
 #include <atomic>
 #include <limits>
+#include <type_traits>
+
+#include <cstddef>
 
 #pragma once
 
@@ -77,7 +80,7 @@ namespace netplus {
 
             // return maximum number of elements that can be allocated
             size_type max_size () const throw() {
-                return std::numeric_limits<std::size_t>::max() / sizeof(T);
+                return (std::numeric_limits<std::size_t>::max)() / sizeof(T);
             }
 
             // allocate but don't initialize num elements of type T

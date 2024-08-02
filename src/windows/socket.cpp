@@ -37,16 +37,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "exception.h"
 #include "socket.h"
 #include "error.h"
-
 #include "config.h"
 
-extern "C" {
-    #include <winsock2.h>
-};
-
 //#define HIDDEN __attribute__ ((visibility ("hidden")))
-
-WSADATA* netplus::socket::_WSAData = nullptr;
 
 
 #define WIN32_LEAN_AND_MEAN
