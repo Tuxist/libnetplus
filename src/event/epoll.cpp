@@ -164,11 +164,9 @@ namespace netplus {
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
             con *ccon=(con*)_Events[pos].data.ptr;
-            if(ccon){
-                CloseEventHandler(pos,tid,args);
-            }
 
             _evtapi->CreateConnetion(&ccon);
+
             if(_ServerSocket->_Type==sockettype::TCP){
                 ccon->csock=new tcp();
             }else if(_ServerSocket->_Type==sockettype::UDP){
@@ -298,7 +296,6 @@ namespace netplus {
 
                 _evtapi->deleteConnetion(ccon);
 
-                _Events[pos].data.ptr=nullptr;
             }catch(NetException &e){
                 throw e;
             }
@@ -349,17 +346,16 @@ EVENTLOOP:
                         switch (pollptr.pollState(i)) {
                             case pollapi::EventHandlerStatus::EVCON:
                                 pollptr.ConnectEventHandler(i,tid,args);
-                                break;
+                                continue;
                             case pollapi::EventHandlerStatus::EVIN:
                                 pollptr.ReadEventHandler(i,tid,args);
-                                break;
+                                continue;
                             case pollapi::EventHandlerStatus::EVOUT:
                                 pollptr.WriteEventHandler(i,tid,args);
-                                break;
+                                continue;
                             default:
                                 NetException  e;
                                 e[NetException::Error] << "EventWorker: Request type not kwon!";
-                                pollptr.CloseEventHandler(i,tid,args);
                                 throw e;
                         }
                     }catch(NetException& e){
@@ -367,11 +363,11 @@ EVENTLOOP:
                             case NetException::Critical:
                                 throw e;
                             case NetException::Note:
-                                break;
+                                continue;
                             default:
                                 std::cerr << e.what() << std::endl;
                                 pollptr.CloseEventHandler(i,tid,args);
-                                break;
+                                continue;
                         }
                     }
                 }
