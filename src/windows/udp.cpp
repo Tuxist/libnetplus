@@ -43,20 +43,20 @@ extern "C" {
 
 #include "config.h"
 
-netplus::udp::udp() {
+netplus::udp::udp() : socket() {
     _SocketPtr=::malloc(sizeof(addrinfo));
     _SocketPtrSize=sizeof(addrinfo);
     _Socket = INVALID_SOCKET;
     _Type=sockettype::UDP;
 }
 
-netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) {
+netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket() {
     NetException exception;
     exception[NetException::Critical] << "udp: Windows doesn't support UnixSockets !";
     throw exception;
 }
 
-netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
+netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
@@ -104,7 +104,7 @@ netplus::udp::~udp(){
     ::free(_SocketPtr);
 }
 
-netplus::udp::udp(int sock){
+netplus::udp::udp(int sock) : socket() {
     _SocketPtr=::malloc(sizeof(addrinfo));
     _SocketPtrSize=sizeof(addrinfo);
     ((struct addrinfo*)_SocketPtr)->ai_family=AF_UNSPEC;

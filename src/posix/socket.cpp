@@ -48,6 +48,8 @@
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
+int netplus::socket::_InitCount = 0;
+
 netplus::socket::socket(){
     _Socket=-1;
     _SocketPtr=nullptr;

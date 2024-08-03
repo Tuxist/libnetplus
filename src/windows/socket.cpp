@@ -46,27 +46,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma comment (lib, "Ws2_32.lib")
 
-namespace netplus {
-    std::atomic<int> _Instance;
-};
+std::atomic<int> netplus::socket::_InitCount=0;
 
 netplus::socket::socket(){
     _Socket=-1;
     _SocketPtr=nullptr;
     _Type=-1;
-    ++_Instance;
-    if (!_WSAData) {
+    if (_InitCount<1) {
         if (WSAStartup(MAKEWORD(2, 2), _WSAData) != 0) {
             NetException exception;
-            exception[NetException::Critical] << "udp: WSAStartup failed: ";
+            exception[NetException::Critical] << "socket: WSAStartup failed: ";
         }
     }
+    ++_InitCount;
 }
 
 netplus::socket::~socket(){
-    --_Instance;
+    --_InitCount;
     int zero = 0;
-    if (_Instance.compare_exchange_strong(zero, std::memory_order_release)) {
+    if (_InitCount.compare_exchange_strong(zero, std::memory_order_release)) {
         WSACleanup();
         delete _WSAData;
         _WSAData = nullptr;

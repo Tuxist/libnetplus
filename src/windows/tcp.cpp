@@ -42,13 +42,13 @@ extern "C" {
 #include "socket.h"
 #include "error.h"
 
-netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) {
+netplus::tcp::tcp(const char* uxsocket,int maxconnections,int sockopts) : socket() {
     NetException exception;
     exception[NetException::Critical] << "tcp: Windows doesn't support UnixSockets !";
     throw exception;
 }
 
-netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) {
+netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
@@ -105,7 +105,7 @@ netplus::tcp::~tcp(){
     ::free(_SocketPtr);
 }
 
-netplus::tcp::tcp() {
+netplus::tcp::tcp() : socket() {
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
@@ -113,7 +113,7 @@ netplus::tcp::tcp() {
     _Type=sockettype::TCP;
 }
 
-netplus::tcp::tcp(int sock) {
+netplus::tcp::tcp(int sock) : socket() {
     _SocketPtr=::malloc(sizeof(addrinfo));
     _SocketPtrSize=sizeof(addrinfo);
      ((struct addrinfo*)_SocketPtr)->ai_family=AF_UNSPEC;

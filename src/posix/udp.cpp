@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "socket.h"
 #include "error.h"
 
-netplus::udp::udp() {
+netplus::udp::udp() : socket() {
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
@@ -54,7 +54,7 @@ netplus::udp::udp() {
     _Type=sockettype::UDP;
 }
 
-netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) {
+netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) : socket() {
     NetException exception;
     int optval = 1;
     if(sockopts == -1)
@@ -80,7 +80,7 @@ netplus::udp::udp(const char* uxsocket,int maxconnections,int sockopts) {
     _Type=sockettype::UDP;
 }
 
-netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) {
+netplus::udp::udp(const char* addr, int port,int maxconnections,int sockopts) : socket() {
     NetException exception;
     _Maxconnections=maxconnections;
     if(sockopts == -1)
@@ -132,7 +132,7 @@ netplus::udp::~udp(){
     ::free(_SocketPtr);
 }
 
-netplus::udp::udp(int sock){
+netplus::udp::udp(int sock) : socket() {
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;

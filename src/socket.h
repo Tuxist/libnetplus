@@ -48,28 +48,29 @@ namespace netplus {
             virtual void  setnonblocking();
             
             
-            virtual void         accept(socket *csock)=0;
-            virtual void         bind()=0;
-            virtual void         listen()=0;
+            virtual void             accept(socket *csock)=0;
+            virtual void             bind()=0;
+            virtual void             listen()=0;
             
-            virtual int          getMaxconnections()=0;
+            virtual int              getMaxconnections()=0;
             
-            virtual size_t       sendData(socket *csock,void *data,unsigned long size)=0;
-            virtual size_t       recvData(socket *csock,void *data,unsigned long size)=0;
+            virtual size_t           sendData(socket *csock,void *data,unsigned long size)=0;
+            virtual size_t           recvData(socket *csock,void *data,unsigned long size)=0;
             
-            virtual void         connect(socket *csock)=0;
+            virtual void             connect(socket *csock)=0;
 
-            virtual void         getAddress(std::string &addr)=0;
+            virtual void             getAddress(std::string &addr)=0;
 
-            virtual int          fd()=0;
+            virtual int              fd()=0;
 
-            virtual socket&      operator=(SOCKET sock)=0;
+            virtual socket&          operator=(SOCKET sock)=0;
 
-            void               *_SocketPtr;
-            size_t              _SocketPtrSize;
-            SOCKET              _Socket;
-            int                 _Type;
-            void               *_Extension;
+            void                    *_SocketPtr;
+            size_t                   _SocketPtrSize;
+            SOCKET                   _Socket;
+            int                      _Type;
+            void                    *_Extension;
+            static std::atomic<int>  _InitCount;
 #ifdef Windows
             WSAData            *_WSAData;
 #endif // Windows
