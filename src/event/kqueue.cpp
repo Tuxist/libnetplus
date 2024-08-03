@@ -157,10 +157,7 @@ namespace netplus {
 
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
-            con *ccon=(con*)_Events[pos].udata;
-            if(ccon){
-                CloseEventHandler(pos,tid,args);
-            }
+            con *ccon;
 
             _evtapi->CreateConnetion(&ccon);
 
@@ -280,7 +277,7 @@ namespace netplus {
             try{
                 struct kevent setevent { 0 };
 
-                EV_SET(&setevent,ccon->csock->fd(),0,EV_CLEAR,0,0,nullptr);
+                EV_SET(&setevent,ccon->csock->fd(),0, EV_DELETE,0,0,nullptr);
 
                 if(kevent(_pollFD,&setevent,1,nullptr,0,nullptr)<0){
                     NetException except;
@@ -289,13 +286,13 @@ namespace netplus {
                     except[NetException::Error] << "CloseEventHandler: can't close socket to kqueue: " << errstr;
                     throw except;
                 }
-                 delete  ccon->csock;
+
+                delete  ccon->csock;
 
                 _evtapi->DisconnectEvent(ccon,tid,args);
 
                 _evtapi->deleteConnetion(ccon);
 
-                _Events[pos].udata=nullptr;
             }catch(NetException &e){
                 throw e;
             }
@@ -346,13 +343,13 @@ EVENTLOOP:
                         switch (pollptr.pollState(i)) {
                             case pollapi::EventHandlerStatus::EVCON:
                                 pollptr.ConnectEventHandler(i,tid,args);
-                                break;
+                                continue;
                             case pollapi::EventHandlerStatus::EVIN:
                                 pollptr.ReadEventHandler(i,tid,args);
-                                break;
+                                continue;
                             case pollapi::EventHandlerStatus::EVOUT:
                                 pollptr.WriteEventHandler(i,tid,args);
-                                break;
+                                continue;
                             default:
                                 NetException  e;
                                 e[NetException::Error] << "EventWorker: no known event !";
@@ -363,11 +360,11 @@ EVENTLOOP:
                             case NetException::Critical:
                                 throw e;
                             case NetException::Note:
-                                break;
+                                continue;
                             default:
                                 std::cerr << e.what() << std::endl;
                                 pollptr.CloseEventHandler(i,tid,args);
-                                break;
+                                continue;
                         }
                     }
                 }
@@ -442,7 +439,7 @@ EVENTLOOP:
             0
         };
 
-        EV_SET(&setevent,_ServerSocket->fd(),EVFILT_READ,EV_ADD | EV_CLEAR | EV_ONESHOT,0,0,nullptr);
+        EV_SET(&setevent,_ServerSocket->fd(),EVFILT_READ,EV_ADD | EV_CLEAR,0,0,nullptr);
 
         if (kevent(_pollFD,&setevent,1,nullptr,0,nullptr) < 0) {
             char errstr[255];
