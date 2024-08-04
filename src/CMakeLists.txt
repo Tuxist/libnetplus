@@ -36,7 +36,7 @@ include_directories(
 
 add_library(netplus SHARED ${netplussrc})
 
-add_library(netplus-static SHARED ${netplussrc})
+add_library(netplus-static STATIC ${netplussrc})
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
    target_link_libraries(netplus)
@@ -70,6 +70,7 @@ export(EXPORT netplusTargets
 )
 
 include(CMakePackageConfigHelpers)
+
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/libnetplusVersion.cmake"
   VERSION ${Upstream_VERSION}
