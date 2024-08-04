@@ -93,3 +93,17 @@ install(
   COMPONENT
     Devel
 )
+
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+    set(CPACK_GENERATOR WIX)
+    set(CPACK_PACKAGE_NAME "libnetplus")
+    set(CPACK_PACKAGE_VENDOR "tuxist.de")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "libnetplus - A C++ Socket and Event Library")
+    set(CPACK_PACKAGE_VERSION "1.0.0")
+    set(CPACK_PACKAGE_VERSION_MAJOR "1")
+    set(CPACK_PACKAGE_VERSION_MINOR "0")
+    set(CPACK_PACKAGE_VERSION_PATCH "0")
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "libnetplus")
+    INCLUDE(CPack)
+endif()
