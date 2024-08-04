@@ -34,7 +34,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/src
 )
 
-add_library(netplus SHARED ${netplussrc})
+add_library(netplus SHARED ${netplussrc} )
 
 add_library(netplus-static STATIC ${netplussrc})
 
@@ -49,10 +49,7 @@ set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
 
-install(TARGETS netplus netplus-static EXPORT netplusTargets 
-	DESTINATION lib 
-	INCLUDES DESTINATION include
-)
+install(TARGETS netplus netplus-static DESTINATION lib  EXPORT netplusTargets)
 
 install(FILES
     socket.h
@@ -70,7 +67,6 @@ export(EXPORT netplusTargets
 )
 
 include(CMakePackageConfigHelpers)
-
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/libnetplusVersion.cmake"
   VERSION ${Upstream_VERSION}
