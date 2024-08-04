@@ -36,6 +36,8 @@ include_directories(
 
 add_library(netplus SHARED ${netplussrc})
 
+add_library(netplus-static SHARED ${netplussrc})
+
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
    target_link_libraries(netplus)
 else()
@@ -45,9 +47,9 @@ endif()
 set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
-set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING cryptplus_MAJOR_VERSION)
+set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
 
-install(TARGETS netplus EXPORT netplusTargets 
+install(TARGETS netplus netplus-static EXPORT netplusTargets 
 	DESTINATION lib 
 	INCLUDES DESTINATION include
 )
