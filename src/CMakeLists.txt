@@ -49,7 +49,14 @@ set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
 
-install(TARGETS netplus netplus-static DESTINATION lib  EXPORT netplusTargets)
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+   install(TARGETS netplus EXPORT netplusTargets RUNTIME DESTINATION lib)
+else()
+   install(TARGETS netplus EXPORT netplusTargets LIBRARY DESTINATION lib)
+endif()
+
+
+install(TARGETS netplus-static DESTINATION lib  EXPORT netplusTargets)
 
 install(FILES
     socket.h
