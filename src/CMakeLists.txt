@@ -50,11 +50,18 @@ set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
-   install(TARGETS netplus EXPORT netplusTargets RUNTIME DESTINATION lib)
+   install(TARGETS netplus EXPORT netplusTargets RUNTIME DESTINATION lib DESTINATION include)
 else()
-   install(TARGETS netplus EXPORT netplusTargets LIBRARY DESTINATION lib)
+   install(TARGETS netplus EXPORT netplusTargets LIBRARY DESTINATION lib DESTINATION include)
 endif()
 
+target_include_directories(netplus INTERFACE
+  $<INSTALL_INTERFACE:include>
+)
+
+target_include_directories(netplus-static INTERFACE
+  $<INSTALL_INTERFACE:include>
+)
 
 install(TARGETS netplus-static DESTINATION lib  EXPORT netplusTargets)
 
@@ -74,6 +81,7 @@ export(EXPORT netplusTargets
 )
 
 include(CMakePackageConfigHelpers)
+
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/libnetplusVersion.cmake"
   VERSION ${Upstream_VERSION}
