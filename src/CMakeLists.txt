@@ -29,14 +29,28 @@ else()
     list(APPEND netplussrc event/poll.cpp)
 endif()
 
-include_directories(
-#  ${MbedTLS_INCLUDE_DIRS}
-  ${CMAKE_SOURCE_DIR}/src
+set(headers
+    socket.h
+    exception.h
+    eventapi.h
+    connection.h
 )
 
-add_library(netplus SHARED ${netplussrc} )
+add_library(netplus SHARED ${netplussrc})
 
 add_library(netplus-static STATIC ${netplussrc})
+
+target_include_directories(netplus
+    PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:include>"
+)
+
+target_include_directories(netplus-static
+    PUBLIC
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "$<INSTALL_INTERFACE:include>"
+)
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
    target_link_libraries(netplus)
@@ -50,28 +64,26 @@ set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
-   install(TARGETS netplus EXPORT netplusTargets RUNTIME DESTINATION lib DESTINATION include)
+   install(
+       TARGETS netplus 
+       EXPORT netplusTargets 
+       RUNTIME DESTINATION bin
+   )
 else()
-   install(TARGETS netplus EXPORT netplusTargets LIBRARY DESTINATION lib DESTINATION include)
+   install(
+        TARGETS netplus 
+        EXPORT netplusTargets     
+        LIBRARY DESTINATION lib
+   )
 endif()
 
-target_include_directories(netplus INTERFACE
-  $<INSTALL_INTERFACE:include>
+install(
+    TARGETS netplus-static 
+    EXPORT netplusTargets 
+    LIBRARY DESTINATION lib
 )
 
-target_include_directories(netplus-static INTERFACE
-  $<INSTALL_INTERFACE:include>
-)
-
-install(TARGETS netplus-static DESTINATION lib  EXPORT netplusTargets)
-
-install(FILES
-    socket.h
-    exception.h
-    eventapi.h
-    connection.h
-DESTINATION include/netplus
-)
+install(FILES ${headers} DESTINATION include/netplus)
 
 set(ConfigPackageLocation lib/cmake/libnetplus)
 
