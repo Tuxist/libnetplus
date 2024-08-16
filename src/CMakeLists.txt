@@ -45,9 +45,9 @@ add_library(netplus-static STATIC ${netplussrc} ${headers})
 
 target_include_directories(netplus
     PRIVATE
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+        ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 set_property(
@@ -59,9 +59,9 @@ set_property(
 
 target_include_directories(netplus-static
     PRIVATE
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+        ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 set_property(TARGET netplus-static APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}")
