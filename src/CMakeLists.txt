@@ -50,10 +50,11 @@ target_sources(netplus PUBLIC
 )
 
 target_include_directories(netplus
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    PUBLIC
-        ${CMAKE_INSTALL_INCLUDEDIR}
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 )
 
 set_property(TARGET netplus APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/include")
@@ -65,12 +66,13 @@ target_sources(netplus-static PUBLIC
 )
 
 target_include_directories(netplus-static
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    PUBLIC
-        ${CMAKE_INSTALL_INCLUDEDIR}
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 )
-
+ 
 set_property(TARGET netplus-static APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}")
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
