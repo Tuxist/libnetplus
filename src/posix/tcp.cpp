@@ -129,7 +129,6 @@ netplus::tcp::~tcp(){
 }
 
 netplus::tcp::tcp() : socket() {
-    ++_InitCount;
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;

@@ -163,7 +163,7 @@ namespace netplus {
 
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
-            con *ccon=(con*)_Events[pos].data.ptr;
+            con *ccon;
 
             _evtapi->CreateConnetion(&ccon);
 
