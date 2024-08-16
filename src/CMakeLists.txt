@@ -46,6 +46,7 @@ add_library(netplus-static STATIC ${netplussrc} ${headers})
 target_sources(netplus PUBLIC
     FILE_SET publicheaders
     TYPE HEADERS
+    BASE_DIRS ${CMAKE_INSTALL_INCLUDEDIR}
     FILES ${headers}
 )
 
@@ -62,6 +63,7 @@ set_property(TARGET netplus APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT
 target_sources(netplus-static PUBLIC
     FILE_SET publicheaders
     TYPE HEADERS
+    BASE_DIRS ${CMAKE_INSTALL_INCLUDEDIR}
     FILES ${headers}
 )
 
