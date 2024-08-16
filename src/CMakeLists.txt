@@ -30,26 +30,42 @@ else()
 endif()
 
 set(headers
-    socket.h
-    exception.h
-    eventapi.h
-    connection.h
+    ${CMAKE_CURRENT_LIST_DIR}/socket.h
+    ${CMAKE_CURRENT_LIST_DIR}/exception.h
+    ${CMAKE_CURRENT_LIST_DIR}/eventapi.h
+    ${CMAKE_CURRENT_LIST_DIR}/connection.h
+    ${CMAKE_CURRENT_LIST_DIR}/base64.h
 )
 
-add_library(netplus SHARED ${netplussrc})
+add_library(netplus SHARED ${netplussrc} ${headers})
 
-add_library(netplus-static STATIC ${netplussrc})
+add_library(netplus-static STATIC ${netplussrc} ${headers})
 
 target_include_directories(netplus
-    PUBLIC
+    PRIVATE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "$<INSTALL_INTERFACE:include>"
+    PUBLIC
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+set_property(
+    TARGET netplus
+    APPEND PROPERTY
+        INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+
 target_include_directories(netplus-static
-    PUBLIC
+    PRIVATE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "$<INSTALL_INTERFACE:include>"
+    PUBLIC
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
+set_property(
+    TARGET netplus-static
+    APPEND PROPERTY
+        INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
@@ -68,12 +84,14 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
        TARGETS netplus 
        EXPORT netplusTargets 
        RUNTIME DESTINATION bin
+       INCLUDES DESTINATION include
    )
 else()
    install(
         TARGETS netplus 
         EXPORT netplusTargets     
         LIBRARY DESTINATION lib
+        INCLUDES DESTINATION include
    )
 endif()
 
@@ -81,6 +99,7 @@ install(
     TARGETS netplus-static 
     EXPORT netplusTargets 
     LIBRARY DESTINATION lib
+    INCLUDES DESTINATION include
 )
 
 install(FILES ${headers} DESTINATION include/netplus)
