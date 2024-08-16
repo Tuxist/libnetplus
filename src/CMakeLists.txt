@@ -32,16 +32,22 @@ else()
 endif()
 
 set(headers
-    ${CMAKE_CURRENT_LIST_DIR}/socket.h
-    ${CMAKE_CURRENT_LIST_DIR}/exception.h
-    ${CMAKE_CURRENT_LIST_DIR}/eventapi.h
-    ${CMAKE_CURRENT_LIST_DIR}/connection.h
-    ${CMAKE_CURRENT_LIST_DIR}/base64.h
+    socket.h
+    exception.h
+    eventapi.h
+    connection.h
+    base64.h
 )
 
 add_library(netplus SHARED ${netplussrc} ${headers})
 
 add_library(netplus-static STATIC ${netplussrc} ${headers})
+
+target_sources(netplus PUBLIC
+    FILE_SET publicheaders
+    TYPE HEADERS
+    FILES ${headers}
+)
 
 target_include_directories(netplus
     PRIVATE
@@ -50,12 +56,13 @@ target_include_directories(netplus
         ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-set_property(
-    TARGET netplus
-    APPEND PROPERTY
-        INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/include"
-)
+set_property(TARGET netplus APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/include")
 
+target_sources(netplus-static PUBLIC
+    FILE_SET publicheaders
+    TYPE HEADERS
+    FILES ${headers}
+)
 
 target_include_directories(netplus-static
     PRIVATE
@@ -65,7 +72,6 @@ target_include_directories(netplus-static
 )
 
 set_property(TARGET netplus-static APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}")
-set_property(TARGET netplus-static APPEND PROPERTY PUBLIC_HEADER "${headers}")
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
    target_link_libraries(netplus)
@@ -77,16 +83,13 @@ set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
-set_property(TARGET netplus APPEND PROPERTY PUBLIC_HEADER "${headers}")
-set_property(TARGET netplus APPEND PROPERTY PUBLIC_HEADER "${headers}")
 
 install(
    TARGETS netplus netplus-static 
    EXPORT netplusTargets
-   RUNTIME DESTINATION ${CMAKE_INSTALL_RUNTIMEDIR}
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/netplus
-   PUBLIC_HEADER DESTINATION  netplus
+   RUNTIME DESTINATION bin
+   LIBRARY DESTINATION lib
+   FILE_SET publicheaders DESTINATION include/netplus
 )
 
 set(ConfigPackageLocation lib/cmake/libnetplus)
