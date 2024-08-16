@@ -95,6 +95,15 @@ install(
 )
 
 set(ConfigPackageLocation lib/cmake/libnetplus)
+set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    "${CMAKE_SOURCE_DIR}/libnetplusConfig.cmake.in"
+    "${CMAKE_BINARY_DIR}/libnetplusConfig.cmake"
+    INSTALL_DESTINATION ${ConfigPackageLocation}
+)
 
 export(EXPORT netplusTargets
   FILE "${CMAKE_CURRENT_BINARY_DIR}/libnetplusTargets.cmake"
@@ -120,9 +129,8 @@ install(EXPORT netplusTargets
 
 install(
   FILES
-    "libnetplusConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/libnetplusVersion.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libnetplusConfig.cmake"
+    "${CMAKE_BINARY_DIR}/libnetplusConfig.cmake"
   DESTINATION
     ${ConfigPackageLocation}
   COMPONENT
