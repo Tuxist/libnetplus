@@ -1,3 +1,5 @@
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 list(APPEND netplussrc
     exception.cpp
     connection.cpp
@@ -51,7 +53,7 @@ target_include_directories(netplus
 set_property(
     TARGET netplus
     APPEND PROPERTY
-        INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}"
+        INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/include"
 )
 
 
@@ -62,11 +64,8 @@ target_include_directories(netplus-static
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
-set_property(
-    TARGET netplus-static
-    APPEND PROPERTY
-        INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}"
-)
+set_property(TARGET netplus-static APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_INSTALL_INCLUDEDIR}")
+set_property(TARGET netplus-static APPEND PROPERTY PUBLIC_HEADER "${headers}")
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
    target_link_libraries(netplus)
@@ -78,31 +77,15 @@ set_property(TARGET netplus PROPERTY VERSION ${Upstream_VERSION})
 set_property(TARGET netplus PROPERTY SOVERSION ${LIBV})
 set_property(TARGET netplus PROPERTY INTERFACE_systempp_MAJOR_VERSION ${LIBV})
 set_property(TARGET netplus APPEND PROPERTY COMPATIBLE_INTERFACE_STRING netplus_MAJOR_VERSION)
-
-if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
-   install(
-       TARGETS netplus 
-       EXPORT netplusTargets 
-       RUNTIME DESTINATION bin
-       INCLUDES DESTINATION include
-   )
-else()
-   install(
-        TARGETS netplus 
-        EXPORT netplusTargets     
-        LIBRARY DESTINATION lib
-        INCLUDES DESTINATION include
-   )
-endif()
+set_property(TARGET netplus APPEND PROPERTY PUBLIC_HEADER "${headers}")
 
 install(
-    TARGETS netplus-static 
-    EXPORT netplusTargets 
-    LIBRARY DESTINATION lib
-    INCLUDES DESTINATION include
+   TARGETS netplus netplus-static 
+   EXPORT netplusTargets
+   RUNTIME DESTINATION ${CMAKE_INSTALL_RUNTIMEDIR}
+   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-
-install(FILES ${headers} DESTINATION include/netplus)
 
 set(ConfigPackageLocation lib/cmake/libnetplus)
 
