@@ -134,7 +134,7 @@ int netplus::tcp::fd(){
     return _Socket;
 }
 
-netplus::tcp& netplus::tcp::operator=(int sock){
+netplus::tcp& netplus::tcp::operator=(SOCKET sock){
      _Socket=sock;
      return *this;
 };

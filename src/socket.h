@@ -90,7 +90,7 @@ namespace netplus {
             void          bind();
             void          listen();
             int           fd();
-            tcp&          operator=(int socket);
+            tcp&          operator=(SOCKET socket);
 
             int           getMaxconnections();
             
