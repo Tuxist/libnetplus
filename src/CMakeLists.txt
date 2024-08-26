@@ -1,4 +1,3 @@
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 list(APPEND netplussrc
     exception.cpp

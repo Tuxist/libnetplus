@@ -2,6 +2,8 @@ project(libnetplus C CXX ASM )
 cmake_minimum_required(VERSION 3.26)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH} )
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 #find_package(MbedTLS REQUIRED)
 
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")

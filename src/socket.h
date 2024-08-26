@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -45,7 +46,7 @@ namespace netplus {
         public:
             socket();
             virtual      ~socket();
-            virtual void  setnonblocking();
+            void                    setnonblocking();
             
             
             virtual void             accept(socket *csock)=0;
