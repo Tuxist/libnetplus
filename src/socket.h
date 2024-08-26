@@ -80,6 +80,7 @@ namespace netplus {
         class tcp : public socket{
         public:
             tcp();
+            tcp(SOCKET socket);
             tcp(const netplus::tcp& ctcp) = delete;
             tcp(const char *uxsocket,int maxconnections,
                 int sockopts);

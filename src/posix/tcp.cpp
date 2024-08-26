@@ -135,7 +135,7 @@ netplus::tcp::tcp() : socket() {
     _Type=sockettype::TCP;
 }
 
-netplus::tcp::tcp(int sock) : socket() {
+netplus::tcp::tcp(SOCKET sock) : socket() {
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
      ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
