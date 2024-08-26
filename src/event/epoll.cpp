@@ -163,7 +163,7 @@ namespace netplus {
 
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
-            con *ccon=(con*)_Events[pos].data.ptr;
+            con *ccon;
 
             _evtapi->CreateConnetion(&ccon);
 
@@ -205,8 +205,6 @@ namespace netplus {
         void ReadEventHandler(int pos,const int tid,void *args) {
             con *rcon = (con*)_Events[pos].data.ptr;
 
-            if(!rcon)
-                assert(0);
             try{
                 char buf[BLOCKSIZE];
                 size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
@@ -278,12 +276,9 @@ namespace netplus {
         void CloseEventHandler(int pos,const int tid,void *args) {
             con *ccon = (con*)_Events[pos].data.ptr;
 
-            if(!ccon)
-                return;
-
             try{
 
-                if(epoll_ctl(_pollFD, EPOLL_CTL_DEL,ccon->csock->fd(), 0)<0){
+                if(epoll_ctl(_pollFD, EPOLL_CTL_DEL,ccon->csock->fd(), nullptr)<0){
                     NetException except;
                     char errstr[255];
                     strerror_r_netplus(errno,errstr,255);

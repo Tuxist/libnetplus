@@ -123,13 +123,11 @@ netplus::tcp::tcp(const char* addr, int port,int maxconnections,int sockopts) : 
 }
 
 netplus::tcp::~tcp(){
-    if(_Socket>=0)
-        ::close(_Socket);
+    ::close(_Socket);
     ::free(_SocketPtr);
 }
 
 netplus::tcp::tcp() : socket() {
-    ++_InitCount;
     _SocketPtr=::malloc(sizeof(sockaddr));
     _SocketPtrSize=sizeof(sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
@@ -214,8 +212,10 @@ size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int 
                      );
     if(rval<0){
         int etype=NetException::Error;
+
         if(errno==EAGAIN)
             etype=NetException::Note;
+
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
 

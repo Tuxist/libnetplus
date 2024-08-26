@@ -28,6 +28,7 @@
 #include <chrono>
 #include <thread>
 #include <cstring>
+#include <atomic>
 
 #include <vector>
 #include <cstdio>
@@ -48,15 +49,17 @@
 
 #define HIDDEN __attribute__ ((visibility ("hidden")))
 
-int netplus::socket::_InitCount = 0;
+std::atomic<int> netplus::socket::_InitCount=0;
 
 netplus::socket::socket(){
     _Socket=-1;
     _SocketPtr=nullptr;
     _Type=-1;
+    ++_InitCount;
 }
 
 netplus::socket::~socket(){
+    --_InitCount;
 }
 
 void netplus::socket::setnonblocking(){
