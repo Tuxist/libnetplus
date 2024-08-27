@@ -47,7 +47,7 @@ namespace netplus {
             socket();
             virtual      ~socket();
             void                     setnonblocking();
-            void                     setTimeout(int usec);
+            void                     setTimeout(int sec);
             
             virtual void             accept(socket *csock)=0;
             virtual void             bind()=0;

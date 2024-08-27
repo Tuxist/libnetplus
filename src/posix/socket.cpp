@@ -72,10 +72,10 @@ void netplus::socket::setnonblocking(){
     }
 }
 
-void netplus::socket::setTimeout(int usec){
+void netplus::socket::setTimeout(int sec){
     struct timeval timeout;
-    timeout.tv_sec =  0;
-    timeout.tv_usec = usec;
+    timeout.tv_sec =  sec;
+    timeout.tv_usec = 0;
     if (setsockopt (_Socket, SOL_SOCKET, SO_RCVTIMEO, &timeout,
         sizeof timeout) < 0){
 
