@@ -39,6 +39,7 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#incldue <sys/time.h>
 #include <netdb.h>
 #include <string.h>
 #include <pthread.h>
