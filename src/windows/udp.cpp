@@ -104,7 +104,7 @@ netplus::udp::~udp(){
     ::free(_SocketPtr);
 }
 
-netplus::udp::udp(int sock) : socket() {
+netplus::udp::udp(SOCKET sock) : socket() {
     _SocketPtr=::malloc(sizeof(addrinfo));
     _SocketPtrSize=sizeof(addrinfo);
     ((struct addrinfo*)_SocketPtr)->ai_family=AF_UNSPEC;

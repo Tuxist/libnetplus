@@ -113,6 +113,7 @@ namespace netplus {
         class udp : public socket{
         public:
             udp();
+            udp(SOCKET sock);
             udp(const udp &cudp) = delete;
             udp(const char *uxsocket,int maxconnections,
                 int sockopts);
@@ -138,7 +139,6 @@ namespace netplus {
             void getAddress(std::string &addr);
 
         private:
-            udp(int sock);
             int             _Maxconnections;
             std::string     _UxPath;
         };
