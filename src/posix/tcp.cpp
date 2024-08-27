@@ -258,10 +258,11 @@ size_t netplus::tcp::recvData(socket *csock, void* data, unsigned long size,int 
     }
     return recvsize;
 }
+
 void netplus::tcp::connect(socket *csock){
     NetException exception;
 
-    if ( ::connect(csock->_Socket,(struct sockaddr*)csock->_SocketPtr,csock->_SocketPtrSize) < 0) {
+    if ( (_Socket=::connect(csock->_Socket,(struct sockaddr*)csock->_SocketPtr,csock->_SocketPtrSize)) < 0) {
 
         char errstr[512];
         strerror_r_netplus(errno,errstr,512);
