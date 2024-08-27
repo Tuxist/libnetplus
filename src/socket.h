@@ -106,7 +106,6 @@ namespace netplus {
             void getAddress(std::string &addr);
 
         private:
-            tcp(int sock);
             int             _Maxconnections;
             std::string     _UxPath;
         };

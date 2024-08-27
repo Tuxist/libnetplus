@@ -1,45 +1,16 @@
-[Buildset]
-BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00l\x00i\x00b\x00n\x00e\x00t\x00p\x00l\x00u\x00s)
-
 [CMake]
-Build Directory Count=4
-Current Build Directory Index-Host System=3
-Current Build Directory Index-Host-System=1
-Temporary Build Directory Index=3
+Build Directory Count=1
+Current Build Directory Index-Host System=0
 
 [CMake][CMake Build Directory 0]
 Build Directory Path=/home/intranet.tuxist.de/jan.koester/Projects/libnetplus/build
-Build Type=
+Build Type=Debug
 CMake Binary=/usr/bin/cmake
 CMake Executable=/usr/bin/cmake
 Environment Profile=
 Extra Arguments=
-Install Directory=/usr/local
+Install Directory=
 Runtime=Host System
-
-[CMake][CMake Build Directory 1]
-Build Directory Path=/home/intranet.tuxist.de/jan.koester/Projects/libnetplus/build
-Build Type=
-CMake Binary=/usr/bin/cmake
-CMake Executable=/usr/bin/cmake
-Environment Profile=
-Extra Arguments=
-Install Directory=/usr/local
-Runtime=Host System
-
-[CMake][CMake Build Directory 3]
-Build Directory Path=/home/intranet.tuxist.de/jan.koester/Projects/libnetplus/build
-Build Type=
-CMake Binary=/usr/local/bin/cmake
-CMake Executable=/usr/local/bin/cmake
-Environment Profile=
-Extra Arguments=
-Install Directory=/usr/local
-Runtime=Host System
-
-[NinjaBuilder]
-Install As Root=true
-Su Command=2
 
 [Project]
 VersionControlSupport=kdevgit
