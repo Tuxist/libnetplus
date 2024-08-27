@@ -134,7 +134,7 @@ namespace netplus {
 
         void resetEventHandler(int pos){
             con *rcon = (con*)_Events[pos].data.ptr;
-            setpollEvents(rcon, EPOLLIN | EPOLLET);
+            setpollEvents(rcon, EPOLLIN);
         }
 
         int pollState(int pos){
@@ -187,7 +187,7 @@ namespace netplus {
             ccon->state=EVIN;
 
             struct epoll_event setevent { 0 };
-            setevent.events =  EPOLLIN | EPOLLET | EPOLLONESHOT;
+            setevent.events =  EPOLLIN | EPOLLONESHOT;
             setevent.data.ptr = ccon;
 
             int estate = epoll_ctl(_pollFD, EPOLL_CTL_ADD,ccon->csock->fd(), &setevent);
@@ -220,16 +220,16 @@ namespace netplus {
 
                 if(!rcon->SendData.empty()){
                     rcon->state=EVOUT;
-                    setpollEvents(rcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(rcon,EPOLLOUT | EPOLLONESHOT);
                     return;
                 }
 
-                setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                setpollEvents(rcon,EPOLLIN | EPOLLONESHOT);
 
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                      rcon->state=EVIN;
-                     setpollEvents(rcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                     setpollEvents(rcon,EPOLLIN | EPOLLONESHOT);
                      return;
                 }
                 throw e;
@@ -244,7 +244,7 @@ namespace netplus {
 
                 if(wcon->SendData.empty()){
                     wcon->state=EVIN;
-                    setpollEvents(wcon,EPOLLIN | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(wcon,EPOLLIN | EPOLLONESHOT);
                     return;
                 }
 
@@ -260,11 +260,11 @@ namespace netplus {
 
                 wcon->lasteventime = time(nullptr);
 
-                setpollEvents(wcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                setpollEvents(wcon,EPOLLOUT | EPOLLONESHOT);
             }catch(NetException &e){
                 if(e.getErrorType()== NetException::Note){
                     wcon->state=EVOUT;
-                    setpollEvents(wcon,EPOLLOUT | EPOLLET | EPOLLONESHOT);
+                    setpollEvents(wcon,EPOLLOUT | EPOLLONESHOT);
                     return;
                 }else{
                     throw e;
