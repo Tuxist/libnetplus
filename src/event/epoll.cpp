@@ -435,7 +435,7 @@ EVENTLOOP:
             0
         };
 
-        setevent.events = EPOLLIN | EPOLLET;
+        setevent.events = EPOLLIN;
         setevent.data.ptr = nullptr;
 
         if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,_ServerSocket->fd(),&setevent) < 0) {
