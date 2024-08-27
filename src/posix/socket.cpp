@@ -70,3 +70,32 @@ void netplus::socket::setnonblocking(){
         throw exception;
     }
 }
+
+void netplus::socket::setTimeout(int usec){
+    struct timeval timeout;
+    timeout.tv_sec =  0;
+    timeout.tv_usec = usec;
+    if (setsockopt (_Socket, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+        sizeof timeout) < 0){
+
+        char errstr[512];
+        strerror_r_netplus(errno,errstr,512);
+
+        NetException exception;
+        exception[NetException::Error] << "Could not set ClientSocket Recv timeout"<< errstr;
+        throw exception;
+    }
+
+
+    if (setsockopt (_Socket, SOL_SOCKET, SO_SNDTIMEO, &timeout,
+        sizeof timeout) < 0){
+
+        char errstr[512];
+        strerror_r_netplus(errno,errstr,512);
+
+        NetException exception;
+        exception[NetException::Error] << "Could not set ClientSocket Send timeout" << errstr;
+        throw exception;
+
+    }
+}

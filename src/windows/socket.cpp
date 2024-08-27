@@ -80,3 +80,7 @@ void netplus::socket::setnonblocking(){
     }
 }
 
+void netplus::socket::setTimeout(int usec){
+    return;
+}
+
