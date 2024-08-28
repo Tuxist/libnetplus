@@ -201,13 +201,13 @@ namespace netplus {
             if(!rcon)
                 assert(0);
             try{
-                char buf[BLOCKSIZE];
-                size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf, BLOCKSIZE);
+                std::shared_ptr<char> buf(new char[BLOCKSIZE]);
+                size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf.get(), BLOCKSIZE);
 
                 rcon->lasteventime = time(nullptr);
 
                 if(rcvsize>0){
-                    rcon->RecvData.append(buf,rcvsize);
+                    rcon->RecvData.append(buf.get(),rcvsize);
                     rcon->state=EVIN;
                 }
 
