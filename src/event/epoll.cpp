@@ -204,9 +204,9 @@ namespace netplus {
 
         void ReadEventHandler(int pos,const int tid,void *args) {
             con *rcon = (con*)_Events[pos].data.ptr;
+            std::shared_ptr<char[BLOCKSIZE]> buf(new char[BLOCKSIZE]);
 
             try{
-                std::shared_ptr<char> buf(new char[BLOCKSIZE]);
                 size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf.get(), BLOCKSIZE);
 
                 rcon->lasteventime = time(nullptr);
