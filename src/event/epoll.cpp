@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BLOCKSIZE 16384
 
 namespace netplus {
+
     class pollapi {
     public:
         pollapi(eventapi *eapi,int timeout){
@@ -73,7 +74,7 @@ namespace netplus {
         virtual int pollState(int pos)=0;
 
         /*EventHandler*/
-        virtual  int waitEventHandler()=0;
+        virtual  int waitEventHandler(int timeout)=0;
         virtual void ConnectEventHandler(int pos,const int tid,void *args)=0;
         virtual void ReadEventHandler(int pos,const int tid,void *args)=0;
         virtual void WriteEventHandler(int pos,const int tid,void *args)=0;
@@ -102,11 +103,7 @@ namespace netplus {
         };
 
         ~poll() {
-            int maxcon=_ServerSocket->getMaxconnections();
-            for (int i = 0; i < maxcon; ++i){
-                _evtapi->deleteConnetion((con*)_Events[i].data.ptr);
-            }
-            delete _Events;
+            delete[] _Events;
         };
 
         /*basic functions*/
@@ -132,11 +129,6 @@ namespace netplus {
             }
         }
 
-        void resetEventHandler(int pos){
-            con *rcon = (con*)_Events[pos].data.ptr;
-            setpollEvents(rcon, EPOLLIN);
-        }
-
         int pollState(int pos){
             con *pcon = (con*)_Events[pos].data.ptr;
             NetException exception;
@@ -147,8 +139,8 @@ namespace netplus {
             return pcon->state;
         }
 
-        int waitEventHandler() {
-            int evn = epoll_wait(_pollFD,_Events, _ServerSocket->getMaxconnections(), -1);
+        int waitEventHandler(int timeout) {
+            int evn = epoll_wait(_pollFD,_Events, _ServerSocket->getMaxconnections(), timeout);
             if (evn < 0 ) {
                 NetException exception;
 
@@ -163,7 +155,10 @@ namespace netplus {
 
         void ConnectEventHandler(int pos,const int tid,void *args)  {
             NetException exception;
-            con *ccon;
+            con *ccon=(con*)_Events[pos].data.ptr;
+
+            if(ccon)
+                _evtapi->deleteConnetion(ccon);
 
             _evtapi->CreateConnetion(&ccon);
 
@@ -204,14 +199,14 @@ namespace netplus {
 
         void ReadEventHandler(int pos,const int tid,void *args) {
             con *rcon = (con*)_Events[pos].data.ptr;
-            std::shared_ptr<char[BLOCKSIZE]> buf(new char[BLOCKSIZE]);
+            std::shared_ptr<char[BLOCKSIZE]> buf( new char[BLOCKSIZE], []( char *p ){ delete [] p; });
 
             try{
                 size_t rcvsize = _ServerSocket->recvData(rcon->csock, buf.get(), BLOCKSIZE);
 
                 rcon->lasteventime = time(nullptr);
 
-                if(rcvsize>0){
+                if(rcvsize!=0){
                     rcon->RecvData.append(buf.get(),rcvsize);
                     rcon->state=EVIN;
                 }
@@ -275,7 +270,6 @@ namespace netplus {
 
         void CloseEventHandler(int pos,const int tid,void *args) {
             con *ccon = (con*)_Events[pos].data.ptr;
-
             try{
 
                 if(epoll_ctl(_pollFD, EPOLL_CTL_DEL,ccon->csock->fd(), nullptr)<0){
@@ -291,6 +285,7 @@ namespace netplus {
 
                 _evtapi->deleteConnetion(ccon);
 
+                _Events[pos].data.ptr=nullptr;
             }catch(NetException &e){
                 throw e;
             }
@@ -332,10 +327,10 @@ namespace netplus {
     public:
         EventWorker(int tid,EventWorkerArgs* args) {
             poll pollptr(args->ssocket,args->event,args->pollfd,args->timeout);
-
+            int wait=0;
 EVENTLOOP:
             try {
-                int wait=pollptr.waitEventHandler();
+                wait=pollptr.waitEventHandler(args->timeout);
                 for(int i =0; i<wait; ++i){
                     try{
                         switch (pollptr.pollState(i)) {
@@ -424,6 +419,7 @@ EVENTLOOP:
 
         signal(SIGPIPE, SIG_IGN);
 
+MAINWORKERLOOP:
         _pollFD = epoll_create1(0);
 
         if (_pollFD < 0) {
@@ -435,7 +431,7 @@ EVENTLOOP:
             0
         };
 
-        setevent.events = EPOLLIN;
+        setevent.events = EPOLLIN | EPOLLET;
         setevent.data.ptr = nullptr;
 
         if (epoll_ctl(_pollFD, EPOLL_CTL_ADD,_ServerSocket->fd(),&setevent) < 0) {
@@ -443,33 +439,29 @@ EVENTLOOP:
             throw exception;
         }
 
-    MAINWORKERLOOP:
+
         EventWorkerArgs eargs;
         eargs.ssocket=_ServerSocket;
         eargs.event=this;
         eargs.pollfd=_pollFD;
         eargs.timeout=_Timeout;
 
-        std::thread **threadpool = new std::thread*[threads];
+        std::vector <std::thread> threadpool;
 
         for (int i = 0; i < threads; i++) {
             try {
-                threadpool[i] = new std::thread([&eargs,i]{
-                    EventWorker *evt = new EventWorker(i,&eargs);
-                    delete evt;
-                });
+                threadpool.push_back( std::thread([&eargs,i]{
+                    EventWorker(i,&eargs);
+                }));
            } catch (NetException& e) {
                throw e;
            }
         }
 
 
-        for(int i = 0; i < threads; i++){
-            threadpool[i]->join();
-            delete threadpool[i];
+        for(auto i = threadpool.begin(); i!=threadpool.end(); ++i){
+            i->join();
         }
-
-        delete[] threadpool;
 
         close(_pollFD);
 

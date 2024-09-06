@@ -128,16 +128,16 @@ netplus::tcp::~tcp(){
 }
 
 netplus::tcp::tcp() : socket() {
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
+    _SocketPtr=::malloc(sizeof(struct sockaddr));
+    _SocketPtrSize=sizeof(struct sockaddr);
     ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=::socket(((struct sockaddr*)_SocketPtr)->sa_family,SOCK_STREAM,0);
     _Type=sockettype::TCP;
 }
 
 netplus::tcp::tcp(SOCKET sock) {
-    _SocketPtr=::malloc(sizeof(sockaddr));
-    _SocketPtrSize=sizeof(sockaddr);
+    _SocketPtr=::malloc(sizeof(struct sockaddr));
+    _SocketPtrSize=sizeof(struct sockaddr);
      ((struct sockaddr*)_SocketPtr)->sa_family=AF_UNSPEC;
     _Socket=sock;
     _Type=sockettype::TCP;
@@ -223,6 +223,7 @@ size_t netplus::tcp::sendData(socket *csock, void* data, unsigned long size,int 
                                        << " ErrorMsg: " <<  errstr;
         throw exception;
     }
+
     return rval;
 }
 

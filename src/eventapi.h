@@ -53,7 +53,7 @@ namespace netplus {
 
         class event : public eventapi{
         public:
-            event(socket *serversocket,int timeout = 60);
+            event(socket *serversocket,int timeout = -1);
             void runEventloop(void *args=nullptr);
             static void *WorkerThread(void *wrkevent);
 

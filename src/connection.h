@@ -134,7 +134,7 @@ namespace netplus {
         public:
             
             con(eventapi *event);
-            ~con();
+            virtual ~con();
 
             /*clientsocket*/
             socket *csock;
