@@ -158,7 +158,7 @@ namespace netplus {
             con *ccon=(con*)_Events[pos].data.ptr;
 
             if(ccon)
-                _evtapi->deleteConnetion(ccon);
+                CloseEventHandler(pos,tid,args);
 
             _evtapi->CreateConnetion(&ccon);
 
